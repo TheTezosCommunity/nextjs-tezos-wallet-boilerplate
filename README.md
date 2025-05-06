@@ -47,13 +47,19 @@ bun dev
 
 ## Project Structure
 
-```
-├── components/     # Reusable UI components
-├── hooks/         # Custom React hooks
-├── pages/         # Next.js pages
-├── public/        # Static assets
-├── styles/        # Global styles
-└── utils/         # Helper functions and constants
+```text
+├── public/             # Static assets
+├── src/
+│   ├── app/            # Next.js App Router (pages, layouts, global styles)
+│   ├── components/     # DApp-specific UI components
+│   │   └── ui/         # shadcn/ui reusable UI primitives
+│   └── lib/            # Utility functions and constants
+├── next.config.ts      # Next.js configuration
+├── tailwind.config.ts  # Tailwind CSS configuration
+├── postcss.config.mjs  # PostCSS configuration
+├── eslint.config.mjs   # ESLint configuration
+├── tsconfig.json       # TypeScript configuration
+└── package.json        # Project metadata and scripts
 ```
 
 ## Environment Variables
