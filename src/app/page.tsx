@@ -8,6 +8,7 @@ import { TransactionForm } from "@/components/transaction-form";
 import { SmartContractInteraction } from "@/components/smart-contract-interaction";
 import { BlockchainExplorer } from "@/components/blockchain-explorer";
 import { ModeToggle } from "@/components/mode-toggle";
+import TezosLogo from "@/components/tezos-logo";
 
 export default function Home() {
     return (
@@ -15,28 +16,21 @@ export default function Home() {
             <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/60">
                 <div className="container flex h-16 items-center justify-between px-6">
                     <div className="flex items-center gap-2">
-                        <svg
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 226 226"
-                            className="h-8 w-8"
-                            fill="currentColor"
-                        >
-                            <path d="M113,22.6L22.6,113l90.4,90.4l90.4-90.4L113,22.6z M113,96.8c-8.9,0-16.2-7.3-16.2-16.2c0-8.9,7.3-16.2,16.2-16.2 c8.9,0,16.2,7.3,16.2,16.2C129.2,89.6,121.9,96.8,113,96.8z M113,161.5c-8.9,0-16.2-7.3-16.2-16.2c0-8.9,7.3-16.2,16.2-16.2 c8.9,0,16.2,7.3,16.2,16.2C129.2,154.3,121.9,161.5,113,161.5z M161.5,113c0-8.9,7.3-16.2,16.2-16.2c8.9,0,16.2,7.3,16.2,16.2 c0,8.9-7.3,16.2-16.2,16.2C168.8,129.2,161.5,121.9,161.5,113z M64.5,113c0-8.9,7.3-16.2,16.2-16.2c8.9,0,16.2,7.3,16.2,16.2 c0,8.9-7.3,16.2-16.2,16.2C71.7,129.2,64.5,121.9,64.5,113z" />
-                        </svg>
+                        <TezosLogo className="text-primary" />
                         <span className="font-bold">Tezos Boilerplate</span>
                     </div>
                     <nav className="hidden md:flex gap-6">
-                        <Link href="#" className="text-sm font-medium transition-colors hover:text-primary">
+                        <Link href="/" className="text-sm font-medium transition-colors hover:text-primary">
                             Home
                         </Link>
                         <Link
-                            href="#"
+                            href="/docs"
                             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
                         >
                             Documentation
                         </Link>
                         <Link
-                            href="#"
+                            href="/docs/examples"
                             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
                         >
                             Examples
@@ -61,8 +55,24 @@ export default function Home() {
                                 </p>
                             </div>
                             <div className="flex flex-col gap-2 min-[400px]:flex-row">
-                                <Button>Get Started</Button>
-                                <Button variant="outline">View on GitHub</Button>
+                                <Link href="/docs">
+                                    <Button>Get Started</Button>
+                                </Link>
+                                <Button variant="outline" asChild>
+                                    <Link href="/playground">🚀 Playground</Link>
+                                </Button>
+                                <Button variant="outline" asChild>
+                                    <Link href="/docs/examples">Examples</Link>
+                                </Button>
+                                <Button variant="outline" asChild>
+                                    <Link
+                                        href="https://github.com/skullzarmy/nextjs-tezos-wallet-boilerplate"
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                    >
+                                        View on GitHub
+                                    </Link>
+                                </Button>
                             </div>
                         </div>
                     </div>
@@ -82,7 +92,7 @@ export default function Home() {
                                 <CardHeader>
                                     <CardTitle>Wallet Connection</CardTitle>
                                     <CardDescription>
-                                        Connect to popular Tezos wallets like Temple, Kukai, and AirGap
+                                        Connect to popular Tezos wallets like Temple, Kukai, and Umami
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent>
@@ -90,7 +100,7 @@ export default function Home() {
                                 </CardContent>
                                 <CardFooter>
                                     <p className="text-sm text-muted-foreground">
-                                        Supports Temple Wallet, Kukai Wallet, Spire, and more
+                                        Supports Temple Wallet, Kukai Wallet, Umami, and more
                                     </p>
                                 </CardFooter>
                             </Card>
@@ -138,7 +148,7 @@ export default function Home() {
                                 </CardContent>
                                 <CardFooter>
                                     <p className="text-sm text-muted-foreground">
-                                        Supports contract origination, invocation, and parameter building
+                                        Supports contract invocation, parameter building, and storage viewing
                                     </p>
                                 </CardFooter>
                             </Card>
@@ -181,12 +191,12 @@ export default function Home() {
                         </Card>
                         <Card>
                             <CardHeader>
-                                <CardTitle>Smart Contract Tools</CardTitle>
+                                <CardTitle>Smart Contract Interaction</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ul className="list-disc pl-5 space-y-2">
-                                    <li>Contract deployment helpers</li>
-                                    <li>Method invocation utilities</li>
+                                    <li>Contract method invocation</li>
+                                    <li>SmartPy contract examples</li>
                                     <li>Parameter builders</li>
                                     <li>Contract storage viewers</li>
                                 </ul>
@@ -214,14 +224,19 @@ export default function Home() {
                         Built with Next.js and Tezos. Open source under MIT license.
                     </p>
                     <div className="flex items-center gap-4">
-                        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                            GitHub
-                        </Link>
-                        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
+                        <Link href="/docs" className="text-sm text-muted-foreground hover:text-foreground">
                             Documentation
                         </Link>
-                        <Link href="#" className="text-sm text-muted-foreground hover:text-foreground">
-                            Tezos Resources
+                        <Link href="/docs/examples" className="text-sm text-muted-foreground hover:text-foreground">
+                            Examples
+                        </Link>
+                        <Link
+                            href="https://github.com/skullzarmy/nextjs-tezos-wallet-boilerplate"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sm text-muted-foreground hover:text-foreground"
+                        >
+                            GitHub
                         </Link>
                     </div>
                 </div>
