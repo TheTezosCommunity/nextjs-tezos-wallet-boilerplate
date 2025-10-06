@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { ApiTable } from "@/components/api-table";
 import { Example } from "@/components/example";
 
@@ -12,130 +13,134 @@ export default function ExamplesPage() {
             </div>
 
             <section>
-                <h2 className="text-3xl font-semibold mb-4">Wallet Connection Flow</h2>
-                <p className="mb-4">
-                    Complete example of implementing wallet connection with proper error handling and state management.
-                </p>
+                <h2 className="text-3xl font-semibold mb-4">Modern Wallet Connection</h2>
+                <p className="mb-4">Using the new wallet system with automatic initialization and state restoration.</p>
 
-                <Example title="Complete Wallet Integration">
+                <Example title="Using the useTezos Hook">
                     <pre className="bg-muted p-4 rounded-md overflow-x-auto text-sm">
                         <code>{`"use client";
 
-import { useState, useEffect } from "react";
-import { DAppClient, BeaconEvent } from "@airgap/beacon-sdk";
-import { TezosToolkit } from "@taquito/taquito";
+import { useTezos } from "@/lib/tezos/useTezos";
+import { Button } from "@/components/ui/button";
 
-const dAppClient = new DAppClient({ name: "My Tezos DApp" });
-const tezos = new TezosToolkit("https://ghostnet.ecadinfra.com/");
+export function WalletExample() {
+  const { 
+    address, 
+    isInitialized, 
+    connectWallet, 
+    connectKukai, 
+    disconnectWallet 
+  } = useTezos();
 
-export function useWallet() {
-  const [connected, setConnected] = useState(false);
-  const [address, setAddress] = useState("");
-  const [balance, setBalance] = useState("0");
+  // Show loading while initializing wallets
+  if (!isInitialized) {
+    return <div>Initializing wallets...</div>;
+  }
 
-  useEffect(() => {
-    // Check for existing connection
-    dAppClient.getActiveAccount().then(account => {
-      if (account) {
-        setAddress(account.address);
-        fetchBalance(account.address);
-        setConnected(true);
-      }
-    });
+  return (
+    <div className="space-y-4">
+      {address ? (
+        <div className="space-y-2">
+          <p>Connected: {address}</p>
+          <Button onClick={disconnectWallet} variant="outline">
+            Disconnect
+          </Button>
+        </div>
+      ) : (
+        <div className="space-x-2">
+          <Button onClick={connectWallet}>
+            Connect Beacon Wallet
+          </Button>
+          <Button onClick={connectKukai} variant="outline">
+            Connect Kukai
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
 
-    // Listen for account changes
-    dAppClient.subscribeToEvent(BeaconEvent.ACTIVE_ACCOUNT_SET, account => {
-      if (account) {
-        setAddress(account.address);
-        fetchBalance(account.address);
-        setConnected(true);
-      }
-    });
-  }, []);
-
-  const fetchBalance = async (addr: string) => {
-    try {
-      const bal = await tezos.tz.getBalance(addr);
-      setBalance((bal.toNumber() / 1000000).toFixed(2));
-    } catch (error) {
-      console.error("Failed to fetch balance:", error);
-    }
-  };
-
-  const connect = async () => {
-    try {
-      const permissions = await dAppClient.requestPermissions();
-      setAddress(permissions.address);
-      await fetchBalance(permissions.address);
-      setConnected(true);
-    } catch (error) {
-      console.error("Connection failed:", error);
-    }
-  };
-
-  const disconnect = async () => {
-    await dAppClient.clearActiveAccount();
-    setConnected(false);
-    setAddress("");
-    setBalance("0");
-  };
-
-  return { connected, address, balance, connect, disconnect };
-}`}</code>
+// The hook automatically:
+// - Checks for existing connections on page load
+// - Restores wallet state on refresh  
+// - Handles multiple wallet providers
+// - Manages connection persistence`}</code>
                     </pre>
                 </Example>
+
+                <div className="mt-4 p-4 border rounded-lg bg-green-50 dark:bg-green-950/20">
+                    <h3 className="font-semibold mb-2">✨ Key Benefits</h3>
+                    <ul className="text-sm text-muted-foreground space-y-1">
+                        <li>
+                            • <strong>Auto-restoration</strong>: Wallet state persists across page refreshes
+                        </li>
+                        <li>
+                            • <strong>Multi-wallet support</strong>: Beacon SDK + Kukai Embed simultaneously
+                        </li>
+                        <li>
+                            • <strong>Zero configuration</strong>: Works out of the box with environment variables
+                        </li>
+                        <li>
+                            • <strong>Type safety</strong>: Full TypeScript support with proper error handling
+                        </li>
+                    </ul>
+                </div>
             </section>
 
             <section>
-                <h2 className="text-3xl font-semibold mb-4">Sending Transactions</h2>
-                <p className="mb-4">Example of sending XTZ transactions with proper validation and error handling.</p>
+                <h2 className="text-3xl font-semibold mb-4">Smart Transaction Sending</h2>
+                <p className="mb-4">Modern transaction handling with automatic gas estimation and retry logic.</p>
 
-                <Example title="Transaction Handler">
+                <Example title="Transaction with Auto Gas Estimation">
                     <pre className="bg-muted p-4 rounded-md overflow-x-auto text-sm">
-                        <code>{`import { TezosToolkit } from "@taquito/taquito";
-import { BeaconWallet } from "@taquito/beacon-wallet";
+                        <code>{`import { useTezos } from "@/lib/tezos/useTezos";
 
-export async function sendTransaction(
+export async function sendTransactionWithGas(
   recipient: string, 
-  amount: number,
-  tezos: TezosToolkit
+  amount: number
 ) {
+  const { Tezos } = useTezos();
+  
   try {
-    // Validate recipient address
-    if (!recipient.startsWith('tz1') && !recipient.startsWith('tz2') && !recipient.startsWith('tz3')) {
+    // Validate inputs
+    if (!recipient.match(/^(tz1|tz2|tz3|KT1)/)) {
       throw new Error('Invalid recipient address');
     }
 
-    // Convert XTZ to mutez
-    const amountMutez = Math.floor(amount * 1000000);
+    // Get gas estimation with retries
+    const getEstimate = async (retries = 3) => {
+      for (let i = 0; i < retries; i++) {
+        try {
+          return await Tezos.estimate.transfer({
+            to: recipient,
+            amount: amount
+          });
+        } catch (error) {
+          if (i === retries - 1) throw error;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    };
+
+    const estimate = await getEstimate();
     
-    // Estimate gas and fees
-    const estimate = await tezos.estimate.transfer({
+    // Send transaction with estimated gas
+    const operation = await Tezos.wallet.transfer({
       to: recipient,
-      amount: amountMutez,
-      mutez: true
-    });
-
-    console.log('Estimated gas:', estimate.gasLimit);
-    console.log('Estimated fee:', estimate.fee);
-
-    // Send the transaction
-    const operation = await tezos.wallet.transfer({
-      to: recipient,
-      amount: amountMutez,
-      mutez: true
+      amount: amount,
+      gasLimit: estimate.gasLimit,
+      storageLimit: estimate.storageLimit,
+      fee: estimate.suggestedFeeMutez
     }).send();
 
-    console.log('Operation hash:', operation.opHash);
-
     // Wait for confirmation
-    const confirmation = await operation.confirmation();
-    console.log('Transaction confirmed:', confirmation);
-
+    await operation.confirmation();
+    
     return {
       success: true,
       opHash: operation.opHash,
-      confirmation
+      gasUsed: estimate.gasLimit,
+      fee: estimate.suggestedFeeMutez
     };
 
   } catch (error) {
@@ -447,9 +452,9 @@ export async function safeTransactionCall<T>(
                         <p className="text-sm text-muted-foreground mb-3">
                             See these examples in action on the home page
                         </p>
-                        <a href="/" className="text-primary hover:underline text-sm">
+                        <Link href="/" className="text-primary hover:underline text-sm">
                             Go to demo →
-                        </a>
+                        </Link>
                     </div>
                     <div className="p-4 border rounded-lg">
                         <h3 className="font-semibold mb-2">📖 Read the Docs</h3>

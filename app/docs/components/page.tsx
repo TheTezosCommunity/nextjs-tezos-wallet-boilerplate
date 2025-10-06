@@ -1,6 +1,6 @@
+import Link from "next/link";
 import { ApiTable } from "@/components/api-table";
 import { Example } from "@/components/example";
-
 
 export default function ComponentsPage() {
     return (
@@ -13,31 +13,86 @@ export default function ComponentsPage() {
             </div>
 
             <section>
-                <h2 className="text-3xl font-semibold mb-4">WalletConnect</h2>
+                <h2 className="text-3xl font-semibold mb-4">WalletConnection</h2>
                 <p className="mb-4">
-                    A comprehensive wallet connection component with support for all major Tezos wallets via Beacon SDK.
+                    Modern wallet connection component with automatic state restoration and multi-wallet support.
                 </p>
 
-
-                <div className="mt-6">
-                    <h3 className="text-xl font-semibold mb-3">Props</h3>
-                    <ApiTable rows={[["showDetails", "boolean - Show expanded wallet details panel"]]} />
+                <div className="p-6 border rounded-lg bg-muted/30">
+                    <h3 className="font-semibold mb-4">Wallet Connection</h3>
+                    <div className="flex items-center gap-4">
+                        <button
+                            type="button"
+                            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md opacity-50 cursor-not-allowed"
+                        >
+                            <span>👛</span>
+                            Connect Wallet (Demo)
+                        </button>
+                        <span className="text-sm text-muted-foreground">Supports Temple, Kukai, Umami & more</span>
+                    </div>
                 </div>
 
-                <Example title="Code Example">
+                <div className="mt-6">
+                    <h3 className="text-xl font-semibold mb-3">Features</h3>
+                    <ul className="space-y-2 text-sm">
+                        <li>✅ Automatic wallet detection and initialization</li>
+                        <li>✅ Persistent connections across page refreshes</li>
+                        <li>✅ Loading states and error handling</li>
+                        <li>✅ Multi-wallet support (Beacon + Kukai)</li>
+                        <li>✅ Responsive design with mobile support</li>
+                    </ul>
+                </div>
+
+                <Example title="Usage">
                     <pre className="bg-muted p-4 rounded-md overflow-x-auto">
-                        <code>{`import { WalletConnect } from "@/components/wallet-connect";
+                        <code>{`import WalletConnection from "@/components/layout/connect/WalletConnection";
 
 export function Header() {
   return (
     <header className="flex justify-between items-center p-4">
       <h1>My Tezos DApp</h1>
-      <WalletConnect />
+      <WalletConnection />
     </header>
   );
 }`}</code>
                     </pre>
                 </Example>
+            </section>
+
+            <section>
+                <h2 className="text-3xl font-semibold mb-4">WalletProvider</h2>
+                <p className="mb-4">
+                    Root provider component that handles wallet initialization and state management for the entire app.
+                </p>
+
+                <Example title="Setup in Layout">
+                    <pre className="bg-muted p-4 rounded-md overflow-x-auto">
+                        <code>{`// app/layout.tsx
+import { WalletProvider } from "@/components/providers/wallet-provider";
+
+export default function RootLayout({ children }) {
+  return (
+    <html>
+      <body>
+        <ThemeProvider>
+          <WalletProvider>
+            {children}
+          </WalletProvider>
+        </ThemeProvider>
+      </body>
+    </html>
+  );
+}`}</code>
+                    </pre>
+                </Example>
+
+                <div className="mt-4 p-4 border rounded-lg bg-yellow-50 dark:bg-yellow-950/20">
+                    <h3 className="font-semibold mb-2">⚡ Auto-Initialization</h3>
+                    <p className="text-sm text-muted-foreground">
+                        The WalletProvider automatically checks for existing wallet connections on app startup and
+                        restores the user&apos;s wallet state without requiring re-connection.
+                    </p>
+                </div>
             </section>
 
             <section>
@@ -223,51 +278,54 @@ export function SendPage() {
             </section>
 
             <section>
-                <h2 className="text-3xl font-semibold mb-4">BlockchainExplorer</h2>
-                <p className="mb-4">
-                    Explore the Tezos blockchain with search functionality for blocks, operations, and accounts via TzKT
-                    API.
-                </p>
+                <h2 className="text-3xl font-semibold mb-4">useTezos Hook</h2>
+                <p className="mb-4">The main hook for accessing Tezos functionality throughout your app.</p>
 
-                <div className="p-6 border rounded-lg bg-muted/30">
-                    <h3 className="font-semibold mb-4">Blockchain Explorer</h3>
-                    <div className="space-y-4">
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                placeholder="Search blocks, addresses, operations..."
-                                className="flex-1 p-2 border rounded-md"
-                                disabled
-                            />
-                            <button
-                                type="button"
-                                className="px-4 py-2 bg-primary text-primary-foreground rounded-md opacity-50 cursor-not-allowed"
-                                disabled
-                            >
-                                Search
-                            </button>
-                        </div>
-                        <div className="grid gap-2">
-                            <div className="p-3 border rounded-md">
-                                <p className="font-medium">Latest Block: #4,123,456</p>
-                                <p className="text-sm text-muted-foreground">2 operations, 15 seconds ago</p>
-                            </div>
-                            <div className="p-3 border rounded-md">
-                                <p className="font-medium">Recent Operation</p>
-                                <p className="text-sm text-muted-foreground">Transaction: 5.0 XTZ</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                <Example title="Basic Usage">
+                    <pre className="bg-muted p-4 rounded-md overflow-x-auto">
+                        <code>{`import { useTezos } from "@/lib/tezos/useTezos";
+
+export function MyComponent() {
+  const { 
+    Tezos, 
+    address, 
+    wallet, 
+    isInitialized, 
+    connectWallet, 
+    disconnectWallet 
+  } = useTezos();
+
+  if (!isInitialized) {
+    return <div>Initializing wallets...</div>;
+  }
+
+  return (
+    <div>
+      {address ? (
+        <div>Connected: {address}</div>
+      ) : (
+        <button onClick={connectWallet}>
+          Connect Wallet
+        </button>
+      )}
+    </div>
+  );
+}`}</code>
+                    </pre>
+                </Example>
 
                 <div className="mt-6">
-                    <h3 className="text-xl font-semibold mb-3">Props</h3>
+                    <h3 className="text-xl font-semibold mb-3">Returned Properties</h3>
                     <ApiTable
                         rows={[
-                            ["network", "string - Tezos network (mainnet, ghostnet, etc.)"],
-                            ["defaultQuery", "string - Initial search query"],
-                            ["onResult", "Function - Callback with search results"],
-                            ["showRecent", "boolean - Show recent blocks/operations"],
+                            ["Tezos", "TezosToolkit - Main Taquito instance"],
+                            ["address", "string | null - Connected wallet address"],
+                            ["wallet", "BeaconWallet | null - Beacon wallet instance"],
+                            ["kukai", "KukaiEmbed | null - Kukai wallet instance"],
+                            ["isInitialized", "boolean - Whether wallets are initialized"],
+                            ["connectWallet", "() => Promise<void> - Connect Beacon wallet"],
+                            ["connectKukai", "() => Promise<void> - Connect Kukai wallet"],
+                            ["disconnectWallet", "() => Promise<void> - Disconnect wallet"],
                         ]}
                     />
                 </div>
@@ -288,9 +346,9 @@ export function SendPage() {
                     <div className="p-4 border rounded-lg">
                         <h3 className="font-semibold mb-2">🏠 Home</h3>
                         <p className="text-sm text-muted-foreground mb-3">Try the components on the home page demo</p>
-                        <a href="/" className="text-primary hover:underline text-sm">
+                        <Link href="/" className="text-primary hover:underline text-sm">
                             Go to demo →
-                        </a>
+                        </Link>
                     </div>
                 </div>
             </section>

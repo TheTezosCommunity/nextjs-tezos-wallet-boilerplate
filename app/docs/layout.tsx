@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, FileText, Settings, Puzzle, Code2 } from "lucide-react";
+import { ArrowLeft, FileText, Settings, Puzzle, Code2, BookOpen, AlertTriangle } from "lucide-react";
 
 const navigation = [
     { name: "Installation", href: "/docs/installation", icon: FileText },
     { name: "Configuration", href: "/docs/configuration", icon: Settings },
     { name: "Components", href: "/docs/components", icon: Puzzle },
     { name: "Examples", href: "/docs/examples", icon: Code2 },
+    { name: "Wallet Guide", href: "/docs/wallet-guide", icon: BookOpen },
+    { name: "Troubleshooting", href: "/docs/troubleshooting", icon: AlertTriangle },
 ];
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {

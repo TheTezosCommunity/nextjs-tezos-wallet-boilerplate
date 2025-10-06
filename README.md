@@ -1,79 +1,165 @@
-# nextjs-tezos-wallet-boilerplate
+# Next.js Tezos Wallet Boilerplate
 
-A modern, production-ready boilerplate for building Tezos dApps with Next.js.
+A modern, production-ready boilerplate for building Tezos dApps with Next.js and comprehensive wallet integration.
 
-## Tech Stack
+## 🚀 Features
 
--   Next.js 15 - React framework with server-side rendering
--   Tailwind CSS 4.1 - Utility-first CSS framework
--   AirGap Beacon 4.5.1 - Wallet connection and interaction
--   Taquito v21 - Tezos blockchain interaction library
--   shadcn/ui - Reusable UI components
+-   🔐 **Multi-Wallet Support** - Beacon SDK (Temple, Kukai, Umami) + Kukai Embed
+-   🔄 **Persistent Connections** - Automatic wallet state restoration on page refresh
+-   ⚡ **Optimized Performance** - Smart gas estimation with retry logic
+-   🎨 **Modern UI** - Built with shadcn/ui components and Tailwind CSS
+-   🏗️ **Smart Contracts** - Deploy and interact with SmartPy contracts
+-   💸 **Token Support** - Send XTZ and FA1.2/FA2 tokens
+-   🔧 **Type Safety** - Full TypeScript support with proper types
+-   📱 **Responsive Design** - Mobile-first approach
 
-## Features
+## 🛠️ Tech Stack
 
--   🔐 Tezos wallet integration with Beacon
--   🎨 Modern UI with Tailwind CSS and shadcn
--   ⚡ Fast page loads with Next.js
--   🔧 Type-safe contract interactions
--   📱 Responsive design out of the box
+-   **Next.js 15** - React framework with App Router
+-   **Taquito v21** - Tezos blockchain interaction library
+-   **Beacon SDK 4.6.1** - Multi-wallet connection protocol
+-   **Kukai Embed** - Direct Kukai wallet integration
+-   **Zustand** - Lightweight state management
+-   **Tailwind CSS 4** - Utility-first CSS framework
+-   **shadcn/ui** - Accessible component library
+-   **TypeScript** - Type-safe development
 
-## Getting Started
+## ⚡ Quick Start
 
 ```bash
 # Clone the repository
 git clone https://github.com/skullzarmy/nextjs-tezos-wallet-boilerplate
-```
+cd nextjs-tezos-wallet-boilerplate
 
-Choose your preferred package manager:
-
-```bash
-# npm
-npm install
-npm run dev
-
-# yarn
-yarn install
-yarn dev
-
-# pnpm
-pnpm install
-pnpm dev
-
-# bun
+# Install dependencies
 bun install
+# or npm install / yarn install / pnpm install
+
+# Start development server
 bun dev
+# or npm run dev / yarn dev / pnpm dev
 ```
 
-## Project Structure
+Open [http://localhost:3000](http://localhost:3000) to see your dApp in action!
+
+## 📁 Project Structure
 
 ```text
-├── public/             # Static assets
-├── src/
-│   ├── app/            # Next.js App Router (pages, layouts, global styles)
-│   ├── components/     # DApp-specific UI components
-│   │   └── ui/         # shadcn/ui reusable UI primitives
-│   └── lib/            # Utility functions and constants
-├── next.config.ts      # Next.js configuration
-├── tailwind.config.ts  # Tailwind CSS configuration
-├── postcss.config.mjs  # PostCSS configuration
-├── eslint.config.mjs   # ESLint configuration
-├── tsconfig.json       # TypeScript configuration
-└── package.json        # Project metadata and scripts
+├── app/                    # Next.js App Router
+│   ├── docs/              # Documentation pages
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout with providers
+│   └── page.tsx           # Main application page
+├── components/
+│   ├── layout/            # Layout components (Header, WalletConnection)
+│   ├── providers/         # React providers (WalletProvider)
+│   ├── ui/                # shadcn/ui reusable components
+│   ├── contract-playground.tsx  # Smart contract interaction
+│   ├── tez-faucet.tsx     # Testnet token faucet
+│   └── ...                # Other dApp components
+├── lib/
+│   ├── tezos/
+│   │   ├── store/         # Zustand wallet store
+│   │   │   └── walletStore.ts
+│   │   └── useTezos.tsx   # Main Tezos hook
+│   ├── constants.ts       # App constants
+│   └── utils.ts           # Utility functions
+├── public/                # Static assets
+├── next.config.mjs        # Next.js configuration
+├── tailwind.config.ts     # Tailwind configuration
+└── components.json        # shadcn/ui configuration
 ```
 
-## Environment Variables
+## 🔧 Configuration
 
-Create a `.env.local` file in the root directory:
+### Environment Variables
 
+Create a `.env.local` file:
+
+```bash
+# Network configuration (ghostnet for testnet, mainnet for production)
+NEXT_PUBLIC_NETWORK=ghostnet
 ```
-NEXT_PUBLIC_TEZOS_NETWORK=ghostnet
+
+### Wallet Configuration
+
+The app automatically configures wallet providers based on your network:
+
+-   **Ghostnet**: Testnet for development and testing
+-   **Mainnet**: Production Tezos network
+
+## 🏗️ Architecture
+
+### Wallet Management
+
+The boilerplate uses a sophisticated wallet management system:
+
+```typescript
+// Zustand store for global wallet state
+const useWalletStore = create<WalletState>((set, get) => ({
+    Tezos: new TezosToolkit(rpcUrl),
+    wallet: null,
+    address: null,
+    // Automatic initialization and state restoration
+    initializeWallets: async () => {
+        /* ... */
+    },
+}));
+
+// React hook for components
+export const useTezos = () => {
+    const store = useWalletStore();
+    // Auto-initialization on first use
+    useEffect(() => {
+        if (!store.isInitialized) {
+            store.initializeWallets();
+        }
+    }, []);
+    return store;
+};
 ```
 
-## Contributing
+### Key Features
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+1. **Auto-Restoration**: Wallet connections persist across page refreshes
+2. **Multi-Provider**: Supports Beacon SDK + Kukai Embed simultaneously
+3. **Smart Gas**: Automatic gas estimation with retry logic
+4. **Type Safety**: Full TypeScript integration
 
-## License
+## 🔗 Available Wallets
 
-MIT
+-   **Temple Wallet** - Browser extension
+-   **Kukai** - Web wallet with social login
+-   **Umami** - Mobile and browser wallet
+-   **Ledger** - Hardware wallet support
+-   **And more** - Any Beacon SDK compatible wallet
+
+## 📚 Documentation
+
+Visit `/docs` in your running application for comprehensive guides:
+
+-   Installation & Setup
+-   Configuration Options
+-   Component API Reference
+-   Code Examples & Patterns
+-   Troubleshooting Guide
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## ⭐ Support
+
+If you find this boilerplate helpful, please give it a star on GitHub!
+
+---
+
+Built with ❤️ for the Tezos ecosystem

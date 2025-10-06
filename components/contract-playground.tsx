@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { ExternalLink, Rocket, Code2, Calculator, Database, Play, CheckCircle, AlertCircle } from "lucide-react";
-import { SmartContractInteraction } from "../old/smart-contract-interaction";
+import { SmartContractInteraction } from "./smart-contract-interaction";
 import { TezFaucet } from "./tez-faucet";
 import { useTezos } from "@/lib/tezos/useTezos";
 import { smartPyExamples } from "@/lib/smartpy-contracts";

@@ -9,10 +9,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Code, Play, Upload, Eye, AlertCircle, Loader2, CheckCircle } from "lucide-react";
+import { Play, Upload, Eye, AlertCircle, Loader2, CheckCircle } from "lucide-react";
 import { useTezos } from "@/lib/tezos/useTezos";
-import { smartPyExamples, formatMichelsonParameter, type SmartPyContract } from "@/lib/smartpy-contracts";
-import { MichelsonMap } from "@taquito/taquito";
+import { smartPyExamples, type SmartPyContract } from "@/lib/smartpy-contracts";
 
 interface SmartContractInteractionProps {
     onSuccess?: (opHash: string, type: "invoke" | "deploy") => void;
@@ -109,7 +108,7 @@ export function SmartContractInteraction({ onSuccess, onError }: SmartContractIn
             if (parameters.trim()) {
                 try {
                     parsedParams = JSON.parse(parameters);
-                } catch (_parseErr) {
+                } catch {
                     throw new Error("Invalid JSON parameters");
                 }
             }
@@ -150,9 +149,10 @@ export function SmartContractInteraction({ onSuccess, onError }: SmartContractIn
         // Use template if selected
         if (deployMode === "template" && selectedTemplate) {
             codeToUse = JSON.stringify(selectedTemplate.code);
-            storageToUse = typeof selectedTemplate.initialStorage === 'object'
-                ? JSON.stringify(selectedTemplate.initialStorage)
-                : String(selectedTemplate.initialStorage);
+            storageToUse =
+                typeof selectedTemplate.initialStorage === "object"
+                    ? JSON.stringify(selectedTemplate.initialStorage)
+                    : String(selectedTemplate.initialStorage);
         }
 
         if (!codeToUse || !storageToUse) {
@@ -216,7 +216,7 @@ export function SmartContractInteraction({ onSuccess, onError }: SmartContractIn
         setSelectedTemplate(template);
         setContractCode(JSON.stringify(template.code, null, 2));
         setContractStorage(
-            typeof template.initialStorage === 'object'
+            typeof template.initialStorage === "object"
                 ? JSON.stringify(template.initialStorage)
                 : String(template.initialStorage)
         );

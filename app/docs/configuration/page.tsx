@@ -14,57 +14,75 @@ export default function ConfigurationPage() {
             <section>
                 <h2 className="text-3xl font-semibold mb-4">Network Configuration</h2>
                 <p className="mb-4">
-                    The boilerplate supports multiple Tezos networks. Configure your RPC endpoints based on your needs.
+                    The boilerplate automatically configures networks based on your environment. The wallet store
+                    handles RPC endpoint selection.
                 </p>
 
                 <ApiTable
                     rows={[
-                        ["Mainnet", "https://mainnet.api.tez.ie"],
-                        ["Ghostnet (Testnet)", "https://ghostnet.ecadinfra.com"],
-                        ["Oxfordnet (Testnet)", "https://oxfordnet.ecadinfra.com"],
-                        ["Parisnet (Archive)", "https://parisnet.ecadinfra.com"],
+                        ["Mainnet", "https://rpc.tzkt.io/mainnet"],
+                        ["Ghostnet (Testnet)", "https://rpc.tzkt.io/ghostnet"],
                     ]}
                 />
 
-                <Example title="TezosToolkit Configuration">
+                <Example title="Automatic Network Configuration">
                     <pre className="bg-muted p-4 rounded-md overflow-x-auto">
-                        <code>{`import { TezosToolkit } from "@taquito/taquito";
+                        <code>{`// lib/tezos/store/walletStore.ts
+import { ENV } from '../../constants';
 
-// For Ghostnet (Testnet)
-const tezos = new TezosToolkit("https://ghostnet.ecadinfra.com/");
+export const useWalletStore = create<WalletState>((set, get) => ({
+  Tezos: new TezosToolkit(
+    ENV === 'dev' 
+      ? 'https://rpc.tzkt.io/ghostnet' 
+      : 'https://rpc.tzkt.io/mainnet'
+  ),
+  // ... rest of store
+}));
 
-// For Mainnet
-const tezos = new TezosToolkit("https://mainnet.api.tez.ie");
-
-// With wallet integration
-tezos.setWalletProvider(wallet);`}</code>
+// lib/constants.ts 
+export const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'ghostnet';
+export const ENV: 'dev' | 'prod' = NETWORK === 'ghostnet' ? 'dev' : 'prod';`}</code>
                     </pre>
                 </Example>
             </section>
 
             <section>
-                <h2 className="text-3xl font-semibold mb-4">Beacon SDK Configuration</h2>
+                <h2 className="text-3xl font-semibold mb-4">Wallet Store Configuration</h2>
                 <p className="mb-4">
-                    Configure the Beacon SDK for wallet connections. The DAppClient handles communication with Tezos
-                    wallets.
+                    The new wallet store automatically handles multi-wallet initialization and state management.
                 </p>
 
-                <Example title="Beacon Client Setup">
+                <Example title="Wallet Store Architecture">
                     <pre className="bg-muted p-4 rounded-md overflow-x-auto">
-                        <code>{`import { DAppClient, BeaconEvent } from "@airgap/beacon-sdk";
+                        <code>{`// lib/tezos/store/walletStore.ts
+interface WalletState {
+  Tezos: TezosToolkit;
+  wallet: BeaconWallet | null;
+  kukai: KukaiEmbed | null;
+  address: string | null;
+  isInitialized: boolean;
+  initializeWallets: () => Promise<void>;
+  connectWallet: () => Promise<void>;
+  connectKukai: () => Promise<void>;
+  disconnectWallet: () => Promise<void>;
+}
 
-const dAppClient = new DAppClient({ 
-  name: "Your DApp Name",
-  iconUrl: "https://your-domain.com/icon.png", // Optional
-  appUrl: "https://your-domain.com" // Optional
-});
-
-// Subscribe to account changes
-dAppClient.subscribeToEvent(BeaconEvent.ACTIVE_ACCOUNT_SET, (account) => {
-  if (account) {
-    console.log("Connected account:", account.address);
+export const useWalletStore = create<WalletState>((set, get) => ({
+  // Auto-initialization on app start
+  initializeWallets: async () => {
+    // Check for existing Beacon connections
+    const activeAccount = await wallet.client.getActiveAccount();
+    if (activeAccount) {
+      set({ address: activeAccount.address });
+    }
+    
+    // Check for existing Kukai sessions  
+    const userInfo = kukai.user;
+    if (userInfo?.pkh) {
+      set({ address: userInfo.pkh });
+    }
   }
-});`}</code>
+}));`}</code>
                     </pre>
                 </Example>
             </section>
@@ -75,28 +93,24 @@ dAppClient.subscribeToEvent(BeaconEvent.ACTIVE_ACCOUNT_SET, (account) => {
 
                 <Example title=".env.local">
                     <pre className="bg-muted p-4 rounded-md overflow-x-auto">
-                        <code>{`# Tezos Network Configuration
-# Choose: mainnet, ghostnet, oxfordnet
-NEXT_PUBLIC_TEZOS_NETWORK=ghostnet
+                        <code>{`# Network Configuration (only variable needed!)
+NEXT_PUBLIC_NETWORK=ghostnet
+# or 
+# NEXT_PUBLIC_NETWORK=mainnet
 
-# Tezos RPC Endpoints
-NEXT_PUBLIC_TEZOS_RPC_MAINNET=https://mainnet.api.tez.ie
-NEXT_PUBLIC_TEZOS_RPC_GHOSTNET=https://ghostnet.ecadinfra.com
-NEXT_PUBLIC_TEZOS_RPC_OXFORDNET=https://oxfordnet.ecadinfra.com
-
-# TzKT API Endpoints  
-NEXT_PUBLIC_TZKT_API_MAINNET=https://api.tzkt.io/v1
-NEXT_PUBLIC_TZKT_API_GHOSTNET=https://api.ghostnet.tzkt.io/v1
-NEXT_PUBLIC_TZKT_API_OXFORDNET=https://api.oxfordnet.tzkt.io/v1
-
-# DApp Configuration
-NEXT_PUBLIC_DAPP_NAME="Your DApp Name"
-NEXT_PUBLIC_DAPP_URL=http://localhost:3000
-
-# Optional: Analytics
-NEXT_PUBLIC_GA_ID=your-google-analytics-id`}</code>
+# Optional: Custom RPC endpoints (uses defaults if not set)
+# NEXT_PUBLIC_RPC_MAINNET=https://your-mainnet-rpc.com
+# NEXT_PUBLIC_RPC_GHOSTNET=https://your-ghostnet-rpc.com`}</code>
                     </pre>
                 </Example>
+
+                <div className="mt-4 p-4 border rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                    <h3 className="font-semibold mb-2">🎯 Simplified Configuration</h3>
+                    <p className="text-sm text-muted-foreground">
+                        The new architecture only requires <code>NEXT_PUBLIC_NETWORK</code> to be set. All other
+                        configuration (RPC endpoints, wallet providers, network types) is handled automatically.
+                    </p>
+                </div>
             </section>
 
             <section>

@@ -256,7 +256,7 @@ export function TezFaucet() {
                             Select your target testnet (Ghostnet for general testing, Shadownet for latest features)
                         </li>
                         <li>Use your connected wallet address or enter a custom address</li>
-                        <li>Click "Request Testnet Tokens" to open the faucet</li>
+                        <li>Click &quot;Request Testnet Tokens&quot; to open the faucet</li>
                         <li>Complete any required verification (captcha, etc.) on the faucet page</li>
                         <li>Tokens will be sent to your address within a few minutes</li>
                     </ul>

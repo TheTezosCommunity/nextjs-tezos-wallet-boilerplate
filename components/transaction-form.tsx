@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import Image from "next/image";
 import TezosLogo from "@/components/tezos-logo";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,8 @@ import {
     Calculator,
     ChevronDownIcon,
 } from "lucide-react";
-import { NetworkSelector } from "@/old/network-selector";
+import { NetworkSelector } from "@/components/network-selector";
+import { NETWORK_CONFIGS } from "@/lib/tezos/store/walletStore";
 import { useTezos } from "@/lib/tezos/useTezos";
 
 // Utility function for formatting token amounts with proper localization
@@ -55,23 +56,6 @@ const formatTokenAmount = (balance: string | number): string => {
     // For very small numbers, show more precision
     return num.toLocaleString("en-US", { maximumFractionDigits: 6 });
 };
-
-// Network configuration
-const TZKT_API_ENDPOINTS = {
-    mainnet: "https://api.tzkt.io/v1",
-    ghostnet: "https://api.ghostnet.tzkt.io/v1",
-    oxfordnet: "https://api.oxfordnet.tzkt.io/v1",
-    shadownet: "https://api.shadownet.tzkt.io/v1",
-} as const;
-
-const TZKT_EXPLORER_ENDPOINTS = {
-    mainnet: "https://tzkt.io",
-    ghostnet: "https://ghostnet.tzkt.io",
-    oxfordnet: "https://oxfordnet.tzkt.io",
-    shadownet: "https://shadownet.tzkt.io",
-} as const;
-
-// Utility function to validate image URLs
 
 // Type definitions
 interface WalletOperation {
@@ -124,14 +108,16 @@ interface TzKTTokenBalance {
 }
 
 export function TransactionForm() {
-    const { Tezos: tezos, address } = useTezos();
+    const { Tezos: tezos, address, network } = useTezos();
     const isConnected = !!address;
-    const network = "ghostnet"; // Default network
-    const account = address ? { address } : null;
 
-    // Dynamic API endpoints based on current network
-    const TZKT_API = TZKT_API_ENDPOINTS[network] || TZKT_API_ENDPOINTS.ghostnet;
-    const TZKT_EXPLORER = TZKT_EXPLORER_ENDPOINTS[network] || TZKT_EXPLORER_ENDPOINTS.ghostnet;
+    // Memoize account object to prevent unnecessary re-renders
+    const account = useMemo(() => (address ? { address } : null), [address]);
+
+    // Use network-aware endpoints from NETWORK_CONFIGS
+    const currentNetworkConfig = NETWORK_CONFIGS[network];
+    const TZKT_API = currentNetworkConfig.tzktApi;
+    const TZKT_EXPLORER = currentNetworkConfig.tzktExplorer;
 
     // State management
     const [walletAssets, setWalletAssets] = useState<WalletAsset[]>([]);
@@ -266,78 +252,6 @@ export function TransactionForm() {
         }
     }, [account?.address, tezos, data.selectedAsset, TZKT_API]);
 
-    // Estimate transaction costs
-    const estimateTransaction = useCallback(async () => {
-        if (!tezos || !data.selectedAsset || !data.recipient || !data.amount) {
-            setEstimate(null);
-            return;
-        }
-
-        try {
-            setStatus("estimating");
-
-            let estimateResult: Awaited<ReturnType<typeof tezos.estimate.transfer>>;
-
-            if (data.selectedAsset.type === "tez") {
-                // Estimate Tez transfer
-                estimateResult = await tezos.estimate.transfer({
-                    to: data.recipient,
-                    amount: parseFloat(data.amount),
-                });
-            } else {
-                // Estimate token transfer
-                if (!data.selectedAsset.contract || !account?.address) {
-                    throw new Error("Missing contract or account information");
-                }
-                const contract = await tezos.wallet.at(data.selectedAsset.contract);
-                const amount = Math.floor(parseFloat(data.amount) * Math.pow(10, data.selectedAsset.decimals));
-
-                if (data.selectedAsset.standard === "fa1.2") {
-                    const transferParams = await contract.methodsObject
-                        .transfer({
-                            from: account.address,
-                            to: data.recipient,
-                            value: amount,
-                        })
-                        .toTransferParams();
-                    estimateResult = await tezos.estimate.transfer(transferParams);
-                } else {
-                    if (!data.selectedAsset.tokenId) {
-                        throw new Error("Token ID is required for FA2 transfers");
-                    }
-                    const transferParams = await contract.methodsObject
-                        .transfer([
-                            {
-                                from_: account.address,
-                                txs: [
-                                    {
-                                        to_: data.recipient,
-                                        token_id: parseInt(data.selectedAsset.tokenId),
-                                        amount,
-                                    },
-                                ],
-                            },
-                        ])
-                        .toTransferParams();
-                    estimateResult = await tezos.estimate.transfer(transferParams);
-                }
-            }
-
-            setEstimate({
-                gasLimit: estimateResult.gasLimit,
-                storageLimit: estimateResult.storageLimit,
-                suggestedFeeMutez: estimateResult.suggestedFeeMutez,
-                totalCost: estimateResult.totalCost,
-                burnFeeMutez: estimateResult.burnFeeMutez,
-            });
-            setStatus("idle");
-        } catch (err) {
-            console.error("Estimation failed:", err);
-            setEstimate(null);
-            setStatus("idle");
-        }
-    }, [tezos, data.selectedAsset, data.recipient, data.amount, account]);
-
     // Handle transaction execution
     const executeTransaction = useCallback(async () => {
         if (!tezos || !account || !data.selectedAsset || !data.recipient || !data.amount) return;
@@ -345,41 +259,115 @@ export function TransactionForm() {
         setStatus("loading");
         setError("");
 
+        // Get gas estimation with retries
+        const getGasEstimate = async (maxRetries = 3): Promise<TransactionEstimate | null> => {
+            if (!data.selectedAsset) return null;
+
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    let estimateResult: Awaited<ReturnType<typeof tezos.estimate.transfer>>;
+
+                    if (data.selectedAsset.type === "tez") {
+                        estimateResult = await tezos.estimate.transfer({
+                            to: data.recipient,
+                            amount: parseFloat(data.amount),
+                        });
+                    } else {
+                        if (!data.selectedAsset.contract || !account?.address) {
+                            throw new Error("Missing contract or account information");
+                        }
+                        const contract = await tezos.wallet.at(data.selectedAsset.contract);
+                        const amount = Math.floor(parseFloat(data.amount) * Math.pow(10, data.selectedAsset.decimals));
+
+                        if (data.selectedAsset.standard === "fa1.2") {
+                            const transferParams = await contract.methodsObject
+                                .transfer({
+                                    from: account.address,
+                                    to: data.recipient,
+                                    value: amount,
+                                })
+                                .toTransferParams();
+                            estimateResult = await tezos.estimate.transfer(transferParams);
+                        } else {
+                            if (!data.selectedAsset.tokenId) {
+                                throw new Error("Token ID is required for FA2 transfers");
+                            }
+                            const transferParams = await contract.methodsObject
+                                .transfer([
+                                    {
+                                        from_: account.address,
+                                        txs: [
+                                            {
+                                                to_: data.recipient,
+                                                token_id: parseInt(data.selectedAsset.tokenId),
+                                                amount,
+                                            },
+                                        ],
+                                    },
+                                ])
+                                .toTransferParams();
+                            estimateResult = await tezos.estimate.transfer(transferParams);
+                        }
+                    }
+
+                    return {
+                        gasLimit: estimateResult.gasLimit,
+                        storageLimit: estimateResult.storageLimit,
+                        suggestedFeeMutez: estimateResult.suggestedFeeMutez,
+                        totalCost: estimateResult.totalCost,
+                        burnFeeMutez: estimateResult.burnFeeMutez,
+                    };
+                } catch (err) {
+                    console.warn(`Gas estimation attempt ${attempt} failed:`, err);
+                    if (attempt === maxRetries) {
+                        console.error("All gas estimation attempts failed, proceeding without estimation");
+                        return null;
+                    }
+                    // Wait a bit before retrying
+                    await new Promise((resolve) => setTimeout(resolve, 1000));
+                }
+            }
+            return null;
+        };
+
         try {
+            // First, try to get gas estimation
+            setStatus("estimating");
+            const gasEstimate = await getGasEstimate();
+
+            setStatus("loading");
             let operation: WalletOperation;
 
             if (data.selectedAsset.type === "tez") {
-                // Execute Tez transfer with estimation
                 const transferParams = {
                     to: data.recipient,
                     amount: parseFloat(data.amount),
                 };
 
-                if (estimate) {
+                if (gasEstimate) {
                     operation = await tezos.wallet
                         .transfer({
                             ...transferParams,
-                            gasLimit: estimate.gasLimit,
-                            storageLimit: estimate.storageLimit,
-                            fee: estimate.suggestedFeeMutez,
+                            gasLimit: gasEstimate.gasLimit,
+                            storageLimit: gasEstimate.storageLimit,
+                            fee: gasEstimate.suggestedFeeMutez,
                         })
                         .send();
                 } else {
                     operation = await tezos.wallet.transfer(transferParams).send();
                 }
             } else {
-                // Execute token transfer
                 if (!data.selectedAsset.contract) {
                     throw new Error("Contract address is required");
                 }
                 const contract = await tezos.wallet.at(data.selectedAsset.contract);
                 const amount = Math.floor(parseFloat(data.amount) * Math.pow(10, data.selectedAsset.decimals));
 
-                const sendOptions = estimate
+                const sendOptions = gasEstimate
                     ? {
-                          gasLimit: estimate.gasLimit,
-                          storageLimit: estimate.storageLimit,
-                          fee: estimate.suggestedFeeMutez,
+                          gasLimit: gasEstimate.gasLimit,
+                          storageLimit: gasEstimate.storageLimit,
+                          fee: gasEstimate.suggestedFeeMutez,
                       }
                     : {};
 
@@ -424,7 +412,7 @@ export function TransactionForm() {
             setStatus("error");
             setError(err instanceof Error ? err.message : "Transaction failed");
         }
-    }, [tezos, account, data, estimate, fetchWalletAssets]);
+    }, [tezos, account, data, fetchWalletAssets]);
 
     // Load wallet assets on mount and account change
     useEffect(() => {
@@ -432,25 +420,6 @@ export function TransactionForm() {
             fetchWalletAssets();
         }
     }, [isConnected, account?.address, fetchWalletAssets]);
-
-    // Auto-estimate when form data changes
-    useEffect(() => {
-        const timeoutId = setTimeout(() => {
-            if (
-                data.selectedAsset &&
-                data.recipient &&
-                data.amount &&
-                data.recipient.match(/^(tz1|tz2|tz3|KT1)/) &&
-                parseFloat(data.amount) > 0
-            ) {
-                estimateTransaction();
-            } else {
-                setEstimate(null);
-            }
-        }, 500); // Debounce estimation calls
-
-        return () => clearTimeout(timeoutId);
-    }, [data.selectedAsset, data.recipient, data.amount, estimateTransaction]);
 
     // Form validation
     const isFormValid = () => {
@@ -460,10 +429,10 @@ export function TransactionForm() {
         const amount = parseFloat(data.amount);
         if (amount <= 0) return false;
 
-        // Check sufficient balance
+        // Check sufficient balance (reserve small amount for fees)
         const maxAmount =
             data.selectedAsset.type === "tez"
-                ? parseFloat(data.selectedAsset.formattedBalance) - (estimate ? estimate.totalCost / 1000000 : 0.01)
+                ? parseFloat(data.selectedAsset.formattedBalance) - 0.01 // Reserve for fees
                 : parseFloat(data.selectedAsset.formattedBalance);
 
         return amount <= maxAmount;
@@ -633,6 +602,7 @@ export function TransactionForm() {
 
                         <Popover open={isAssetDropdownOpen} onOpenChange={setIsAssetDropdownOpen}>
                             <PopoverTrigger asChild>
+                                {/** biome-ignore lint/a11y/useSemanticElements: Custom dropdown with rich UI elements (icons, images, complex layout) that native <select> cannot support */}
                                 <Button
                                     variant="outline"
                                     role="combobox"
