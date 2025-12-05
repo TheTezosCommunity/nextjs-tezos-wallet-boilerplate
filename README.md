@@ -24,6 +24,14 @@ A modern, production-ready boilerplate for building Tezos dApps with Next.js and
 -   **shadcn/ui** - Accessible component library
 -   **TypeScript** - Type-safe development
 
+## 🔒 Security
+
+> **✅ Security Patch Applied**
+>
+> This boilerplate uses Next.js 15.3.6, which includes the security patch for [CVE-2025-66478](https://nextjs.org/blog/CVE-2025-66478) - a critical remote code execution vulnerability in React Server Components.
+>
+> The patched version includes a hardened React Server Components implementation that prevents untrusted inputs from influencing server-side execution behavior.
+
 ## ⚡ Quick Start
 
 ```bash
