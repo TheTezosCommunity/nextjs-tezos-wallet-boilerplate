@@ -2,8 +2,8 @@ import { create } from "zustand";
 import { TezosToolkit } from "@taquito/taquito";
 import { ENV } from "../../constants";
 
-// Import types for better type safety
-import type { BeaconWallet } from "@taquito/beacon-wallet";
+// Type-only import — safe for SSR; runtime import is done lazily inside actions.
+import type { OctezConnectWallet } from "../OctezConnectWallet";
 import type { KukaiEmbed } from "kukai-embed";
 
 // Network configuration types
@@ -20,7 +20,7 @@ interface NetworkConfig {
 
 interface WalletState {
     Tezos: TezosToolkit;
-    wallet: BeaconWallet | null;
+    wallet: OctezConnectWallet | null;
     kukai: KukaiEmbed | null;
     address: string | null;
     network: TezosNetwork;
@@ -31,7 +31,7 @@ interface WalletState {
     disconnectWallet: () => Promise<void>;
     switchNetwork: (network: TezosNetwork) => Promise<void>;
     setTezos: (tezos: TezosToolkit) => void;
-    setWallet: (wallet: BeaconWallet | null) => void;
+    setWallet: (wallet: OctezConnectWallet | null) => void;
     setKukai: (kukai: KukaiEmbed | null) => void;
     setAddress: (address: string | null) => void;
     setNetwork: (network: TezosNetwork) => void;
@@ -88,33 +88,27 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     isInitialized: false,
     initializeWallets: async () => {
         try {
-            const { BeaconWallet } = await import("@taquito/beacon-wallet");
-            const { NetworkType } = await import("@airgap/beacon-dapp");
+            const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
+            const networkConfig = NETWORK_CONFIGS[get().network];
 
-            // Initialize BeaconWallet using singleton pattern from Taquito docs
-            const wallet = new BeaconWallet({
+            const wallet = new OctezConnectWallet({
                 name: "Tezos Boilerplate",
-                preferredNetwork: ENV === "dev" ? NetworkType.GHOSTNET : NetworkType.MAINNET,
+                network: buildNetwork(get().network, networkConfig.rpcUrl),
             });
 
             const { Tezos } = get();
             Tezos.setWalletProvider(wallet);
             set({ wallet });
 
-            // Check if there's an active Beacon account
+            // Restore any active session from a previous page load
             try {
                 const activeAccount = await wallet.client.getActiveAccount();
                 if (activeAccount) {
-                    console.log("Found existing Beacon wallet connection:", activeAccount.address);
                     set({ address: activeAccount.address });
                 }
             } catch {
-                console.log("No existing Beacon wallet connection found");
+                // No prior session — start fresh
             }
-
-            // Skip Kukai initialization entirely during auto-init to prevent conflicts
-            // Kukai will only be initialized when explicitly requested via connectKukai
-            console.log("Skipping Kukai auto-initialization to prevent singleton conflicts");
 
             set({ isInitialized: true });
         } catch (error) {
@@ -126,14 +120,14 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         try {
             let { wallet } = get();
 
-            // If wallet not initialized, initialize it first
+            // Lazily create the wallet if initializeWallets has not run yet
             if (!wallet) {
-                const { BeaconWallet } = await import("@taquito/beacon-wallet");
-                const { NetworkType } = await import("@airgap/beacon-dapp");
+                const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
+                const networkConfig = NETWORK_CONFIGS[get().network];
 
-                wallet = new BeaconWallet({
+                wallet = new OctezConnectWallet({
                     name: "Tezos Boilerplate",
-                    preferredNetwork: ENV === "dev" ? NetworkType.GHOSTNET : NetworkType.MAINNET,
+                    network: buildNetwork(get().network, networkConfig.rpcUrl),
                 });
 
                 const { Tezos } = get();
@@ -184,7 +178,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     disconnectWallet: async () => {
         const { wallet, kukai } = get();
         if (wallet) {
-            await wallet.client.clearActiveAccount();
+            await wallet.clearActiveAccount();
             set({ address: null });
         }
         if (kukai) {
@@ -194,34 +188,26 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     },
     switchNetwork: async (newNetwork: TezosNetwork) => {
         try {
-            const { Tezos, wallet } = get();
+            const { Tezos } = get();
             const networkConfig = NETWORK_CONFIGS[newNetwork];
 
-            // Update RPC provider using Taquito setProvider pattern
+            // Update RPC provider
             Tezos.setProvider({ rpc: networkConfig.rpcUrl });
 
-            // If wallet is connected, reconnect to new network
-            if (wallet) {
-                const { BeaconWallet } = await import("@taquito/beacon-wallet");
-                const { NetworkType } = await import("@airgap/beacon-dapp");
-
-                // Clear current connection
-                await wallet.client.clearActiveAccount();
-
-                // Create new wallet instance for new network
-                const networkType = newNetwork === "mainnet" ? NetworkType.MAINNET : NetworkType.GHOSTNET;
-                const newWallet = new BeaconWallet({
+            // Recreate the wallet for the new network.
+            // reset: true destroys the existing DAppClient singleton so the
+            // new one can register its own keypair and message listeners.
+            const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
+            const newWallet = new OctezConnectWallet(
+                {
                     name: "Tezos Boilerplate",
-                    preferredNetwork: networkType,
-                });
+                    network: buildNetwork(newNetwork, networkConfig.rpcUrl),
+                },
+                true // reset singleton
+            );
 
-                Tezos.setWalletProvider(newWallet);
-                set({ wallet: newWallet, address: null });
-
-                console.log(`Switched to ${networkConfig.name} network`);
-            }
-
-            set({ network: newNetwork });
+            Tezos.setWalletProvider(newWallet);
+            set({ wallet: newWallet, address: null, network: newNetwork });
         } catch (error) {
             console.error("Failed to switch network:", error);
             throw error;
