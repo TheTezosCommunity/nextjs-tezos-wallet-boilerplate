@@ -9,8 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@airgap/beacon-dapp": "^4.6.1",
-    "@airgap/beacon-sdk": "^4.6.1",
+    "@tezos-x/octez.connect-sdk": "^4.8.3",
     "@radix-ui/react-accordion": "^1.2.12",
     "@radix-ui/react-alert-dialog": "^1.1.15",
     "@radix-ui/react-aspect-ratio": "^1.1.7",
@@ -40,7 +39,6 @@
     "@radix-ui/react-toggle-group": "^1.1.11",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@tanstack/react-query": "^5.62.16",
-    "@taquito/beacon-wallet": "^23.0.2",
     "@taquito/taquito": "^23.0.2",
     "@types/react-syntax-highlighter": "^15.5.13",
     "@uiw/react-md-editor": "^4.0.8",
