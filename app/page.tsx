@@ -1,12 +1,32 @@
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { NFTGallery } from "@/components/nft-gallery";
-import { TransactionForm } from "@/components/transaction-form";
-import { SmartContractInteraction } from "@/components/smart-contract-interaction";
 
 import WalletConnection from "@/components/layout/connect/WalletConnection";
+
+// Lazy-load heavy tab panels on demand to keep initial JavaScript payload minimal
+const NFTGallery = dynamic(
+    () => import("@/components/nft-gallery").then((mod) => mod.NFTGallery),
+    {
+        loading: () => <div className="p-8 text-center text-muted-foreground animate-pulse">Loading NFT Gallery...</div>,
+    }
+);
+
+const TransactionForm = dynamic(
+    () => import("@/components/transaction-form").then((mod) => mod.TransactionForm),
+    {
+        loading: () => <div className="p-8 text-center text-muted-foreground animate-pulse">Loading Transaction Form...</div>,
+    }
+);
+
+const SmartContractInteraction = dynamic(
+    () => import("@/components/smart-contract-interaction").then((mod) => mod.SmartContractInteraction),
+    {
+        loading: () => <div className="p-8 text-center text-muted-foreground animate-pulse">Loading Smart Contract Tools...</div>,
+    }
+);
 
 export default function Home() {
     return (

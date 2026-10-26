@@ -24,7 +24,7 @@ interface DeployedContract {
 export function ContractPlayground() {
     const { address } = useTezos();
     const [deployedContracts, setDeployedContracts] = useState<DeployedContract[]>([]);
-    const currentNetwork = { name: "ghostnet" }; // Default to ghostnet for now
+    const currentNetwork = { name: "shadownet" };
 
     const handleContractDeployed = (opHash: string, type: "invoke" | "deploy") => {
         if (type === "deploy") {
@@ -35,7 +35,7 @@ export function ContractPlayground() {
                 address: "KT1...", // Would be extracted from operation result
                 opHash,
                 timestamp: Date.now(),
-                network: currentNetwork?.name || "ghostnet",
+                network: currentNetwork?.name || "shadownet",
             };
             setDeployedContracts((prev) => [newContract, ...prev]);
         }
@@ -65,10 +65,10 @@ export function ContractPlayground() {
                     <div className="flex items-center gap-2">
                         <div
                             className={`w-2 h-2 rounded-full ${
-                                currentNetwork?.name === "ghostnet"
-                                    ? "bg-blue-500"
-                                    : currentNetwork?.name === "shadownet"
+                                currentNetwork?.name === "shadownet"
                                     ? "bg-purple-500"
+                                    : currentNetwork?.name === "mainnet"
+                                    ? "bg-emerald-500"
                                     : "bg-gray-500"
                             }`}
                         />

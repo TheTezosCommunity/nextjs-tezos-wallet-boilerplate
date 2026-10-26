@@ -21,7 +21,7 @@ export default function ConfigurationPage() {
                 <ApiTable
                     rows={[
                         ["Mainnet", "https://rpc.tzkt.io/mainnet"],
-                        ["Ghostnet (Testnet)", "https://rpc.tzkt.io/ghostnet"],
+                        ["Shadownet (Testnet)", "https://rpc.tzkt.io/shadownet"],
                     ]}
                 />
 
@@ -33,15 +33,15 @@ import { ENV } from '../../constants';
 export const useWalletStore = create<WalletState>((set, get) => ({
   Tezos: new TezosToolkit(
     ENV === 'dev' 
-      ? 'https://rpc.tzkt.io/ghostnet' 
+      ? 'https://rpc.tzkt.io/shadownet' 
       : 'https://rpc.tzkt.io/mainnet'
   ),
   // ... rest of store
 }));
 
 // lib/constants.ts 
-export const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'ghostnet';
-export const ENV: 'dev' | 'prod' = NETWORK === 'ghostnet' ? 'dev' : 'prod';`}</code>
+export const NETWORK = process.env.NEXT_PUBLIC_NETWORK || 'shadownet';
+export const ENV: 'dev' | 'prod' = NETWORK === 'shadownet' ? 'dev' : 'prod';`}</code>
                     </pre>
                 </Example>
             </section>
@@ -94,13 +94,13 @@ export const useWalletStore = create<WalletState>((set, get) => ({
                 <Example title=".env.local">
                     <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                         <code>{`# Network Configuration (only variable needed!)
-NEXT_PUBLIC_NETWORK=ghostnet
+NEXT_PUBLIC_NETWORK=shadownet
 # or 
 # NEXT_PUBLIC_NETWORK=mainnet
 
 # Optional: Custom RPC endpoints (uses defaults if not set)
 # NEXT_PUBLIC_RPC_MAINNET=https://your-mainnet-rpc.com
-# NEXT_PUBLIC_RPC_GHOSTNET=https://your-ghostnet-rpc.com`}</code>
+# NEXT_PUBLIC_RPC_SHADOWNET=https://your-shadownet-rpc.com`}</code>
                     </pre>
                 </Example>
 
@@ -152,8 +152,7 @@ NEXT_PUBLIC_NETWORK=ghostnet
                 <ApiTable
                     rows={[
                         ["Mainnet API", "https://api.tzkt.io"],
-                        ["Ghostnet API", "https://api.ghostnet.tzkt.io"],
-                        ["Oxfordnet API", "https://api.oxfordnet.tzkt.io"],
+                        ["Shadownet API", "https://api.shadownet.tzkt.io"],
                     ]}
                 />
 
@@ -161,13 +160,13 @@ NEXT_PUBLIC_NETWORK=ghostnet
                     <pre className="bg-muted p-4 rounded-md overflow-x-auto">
                         <code>{`// Fetch account information
 const response = await fetch(
-  \`https://api.ghostnet.tzkt.io/v1/accounts/\${address}\`
+  \`https://api.shadownet.tzkt.io/v1/accounts/\${address}\`
 );
 const account = await response.json();
 
 // Fetch account operations
 const opsResponse = await fetch(
-  \`https://api.ghostnet.tzkt.io/v1/accounts/\${address}/operations\`
+  \`https://api.shadownet.tzkt.io/v1/accounts/\${address}/operations\`
 );
 const operations = await opsResponse.json();`}</code>
                     </pre>

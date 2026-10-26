@@ -2,12 +2,12 @@ import { create } from "zustand";
 import { TezosToolkit } from "@taquito/taquito";
 import { ENV } from "../../constants";
 
-// Import types for better type safety
-import type { BeaconWallet } from "@taquito/beacon-wallet";
+// Type-only import — safe for SSR; runtime import is done lazily inside actions.
+import type { OctezConnectWallet } from "../OctezConnectWallet";
 import type { KukaiEmbed } from "kukai-embed";
 
 // Network configuration types
-export type TezosNetwork = "mainnet" | "ghostnet" | "oxfordnet" | "shadownet";
+export type TezosNetwork = "mainnet" | "shadownet";
 
 interface NetworkConfig {
     name: string;
@@ -20,7 +20,7 @@ interface NetworkConfig {
 
 interface WalletState {
     Tezos: TezosToolkit;
-    wallet: BeaconWallet | null;
+    wallet: OctezConnectWallet | null;
     kukai: KukaiEmbed | null;
     address: string | null;
     network: TezosNetwork;
@@ -29,9 +29,10 @@ interface WalletState {
     connectWallet: () => Promise<void>;
     connectKukai: () => Promise<void>;
     disconnectWallet: () => Promise<void>;
+    resetWalletConnection: () => Promise<void>;
     switchNetwork: (network: TezosNetwork) => Promise<void>;
     setTezos: (tezos: TezosToolkit) => void;
-    setWallet: (wallet: BeaconWallet | null) => void;
+    setWallet: (wallet: OctezConnectWallet | null) => void;
     setKukai: (kukai: KukaiEmbed | null) => void;
     setAddress: (address: string | null) => void;
     setNetwork: (network: TezosNetwork) => void;
@@ -39,45 +40,82 @@ interface WalletState {
 
 // Network configurations following Taquito best practices
 const NETWORK_CONFIGS: Record<TezosNetwork, NetworkConfig> = {
-    mainnet: {
-        name: "Mainnet",
-        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_MAINNET || "https://mainnet.api.tez.ie",
-        tzktApi: process.env.NEXT_PUBLIC_TZKT_API_MAINNET || "https://api.tzkt.io/v1",
-        tzktExplorer: "https://tzkt.io",
-        isTestnet: false,
-    },
-    ghostnet: {
-        name: "Ghostnet",
-        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_GHOSTNET || "https://ghostnet.ecadinfra.com",
-        tzktApi: process.env.NEXT_PUBLIC_TZKT_API_GHOSTNET || "https://api.ghostnet.tzkt.io/v1",
-        tzktExplorer: "https://ghostnet.tzkt.io",
-        isTestnet: true,
-        faucetUrl: "https://faucet.ghostnet.teztnets.com",
-    },
-    oxfordnet: {
-        name: "Oxfordnet",
-        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_OXFORDNET || "https://oxfordnet.ecadinfra.com",
-        tzktApi: process.env.NEXT_PUBLIC_TZKT_API_OXFORDNET || "https://api.oxfordnet.tzkt.io/v1",
-        tzktExplorer: "https://oxfordnet.tzkt.io",
-        isTestnet: true,
-    },
     shadownet: {
         name: "Shadownet",
-        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_SHADOWNET || "https://rpc.shadownet.teztnets.com",
+        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_SHADOWNET || "https://rpc.tzkt.io/shadownet",
         tzktApi: process.env.NEXT_PUBLIC_TZKT_API_SHADOWNET || "https://api.shadownet.tzkt.io/v1",
         tzktExplorer: "https://shadownet.tzkt.io",
         isTestnet: true,
         faucetUrl: "https://faucet.shadownet.teztnets.com",
     },
+    mainnet: {
+        name: "Mainnet",
+        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_MAINNET || "https://rpc.tzkt.io/mainnet",
+        tzktApi: process.env.NEXT_PUBLIC_TZKT_API_MAINNET || "https://api.tzkt.io/v1",
+        tzktExplorer: "https://tzkt.io",
+        isTestnet: false,
+    },
 };
 
-// Get initial network from environment or default to ghostnet
+// Get initial network from environment or default to shadownet
 const getInitialNetwork = (): TezosNetwork => {
-    const envNetwork = (process.env.NEXT_PUBLIC_TEZOS_NETWORK as TezosNetwork) || "ghostnet";
-    return Object.keys(NETWORK_CONFIGS).includes(envNetwork) ? envNetwork : "ghostnet";
+    const envNetwork = (process.env.NEXT_PUBLIC_TEZOS_NETWORK as TezosNetwork) || "shadownet";
+    return Object.keys(NETWORK_CONFIGS).includes(envNetwork) ? envNetwork : "shadownet";
 };
 
 const initialNetwork = getInitialNetwork();
+
+function getDAppMetadata() {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return {
+        name: "Tezos Boilerplate",
+        description: "A modern boilerplate for building Tezos dApps with Next.js",
+        appUrl: origin || undefined,
+        iconUrl: origin ? `${origin}/icon1.png` : undefined,
+    };
+}
+
+/**
+ * Checks if a session account matches the target network.
+ */
+function matchesActiveNetwork(
+    account: { network?: { type?: string; rpcUrl?: string } } | null,
+    targetNetwork: TezosNetwork
+): boolean {
+    if (!account?.network?.type) return false;
+    const accountNet = account.network.type.toLowerCase();
+    if (targetNetwork === "mainnet") {
+        return accountNet === "mainnet";
+    }
+    if (targetNetwork === "shadownet") {
+        return accountNet === "shadownet";
+    }
+    return false;
+}
+
+/**
+ * Check if a previous Beacon session exists in localStorage.
+ */
+export function hasBeaconSession(): boolean {
+    if (typeof window === "undefined" || typeof localStorage === "undefined") return false;
+    for (let i = 0; i < localStorage.length; i++) {
+        if (localStorage.key(i)?.startsWith("beacon:")) return true;
+    }
+    return false;
+}
+
+/**
+ * Nuclear reset for any corrupted or stale Beacon state in localStorage.
+ */
+export function clearBeaconState(): void {
+    if (typeof localStorage === "undefined") return;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("beacon:")) keysToRemove.push(key);
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+}
 
 export const useWalletStore = create<WalletState>((set, get) => ({
     Tezos: new TezosToolkit(NETWORK_CONFIGS[initialNetwork].rpcUrl),
@@ -88,33 +126,28 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     isInitialized: false,
     initializeWallets: async () => {
         try {
-            const { BeaconWallet } = await import("@taquito/beacon-wallet");
-            const { NetworkType } = await import("@airgap/beacon-dapp");
+            const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
+            const currentNetwork = get().network;
+            const networkConfig = NETWORK_CONFIGS[currentNetwork];
 
-            // Initialize BeaconWallet using singleton pattern from Taquito docs
-            const wallet = new BeaconWallet({
-                name: "Tezos Boilerplate",
-                preferredNetwork: ENV === "dev" ? NetworkType.GHOSTNET : NetworkType.MAINNET,
+            const wallet = new OctezConnectWallet({
+                ...getDAppMetadata(),
+                network: buildNetwork(currentNetwork, networkConfig.rpcUrl),
             });
 
             const { Tezos } = get();
             Tezos.setWalletProvider(wallet);
             set({ wallet });
 
-            // Check if there's an active Beacon account
+            // Restore any active session that matches the current network
             try {
                 const activeAccount = await wallet.client.getActiveAccount();
-                if (activeAccount) {
-                    console.log("Found existing Beacon wallet connection:", activeAccount.address);
+                if (activeAccount && matchesActiveNetwork(activeAccount, currentNetwork)) {
                     set({ address: activeAccount.address });
                 }
             } catch {
-                console.log("No existing Beacon wallet connection found");
+                // No prior session — start fresh
             }
-
-            // Skip Kukai initialization entirely during auto-init to prevent conflicts
-            // Kukai will only be initialized when explicitly requested via connectKukai
-            console.log("Skipping Kukai auto-initialization to prevent singleton conflicts");
 
             set({ isInitialized: true });
         } catch (error) {
@@ -125,15 +158,16 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     connectWallet: async () => {
         try {
             let { wallet } = get();
+            const currentNetwork = get().network;
+            const networkConfig = NETWORK_CONFIGS[currentNetwork];
 
-            // If wallet not initialized, initialize it first
+            // Lazily create the wallet if initializeWallets has not run yet
             if (!wallet) {
-                const { BeaconWallet } = await import("@taquito/beacon-wallet");
-                const { NetworkType } = await import("@airgap/beacon-dapp");
+                const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
 
-                wallet = new BeaconWallet({
-                    name: "Tezos Boilerplate",
-                    preferredNetwork: ENV === "dev" ? NetworkType.GHOSTNET : NetworkType.MAINNET,
+                wallet = new OctezConnectWallet({
+                    ...getDAppMetadata(),
+                    network: buildNetwork(currentNetwork, networkConfig.rpcUrl),
                 });
 
                 const { Tezos } = get();
@@ -141,7 +175,56 @@ export const useWalletStore = create<WalletState>((set, get) => ({
                 set({ wallet });
             }
 
-            await wallet.requestPermissions();
+            // Check if there is already a matching active account from a previous session
+            const existing = await wallet.client.getActiveAccount();
+            if (existing && matchesActiveNetwork(existing, currentNetwork)) {
+                set({ address: existing.address });
+                return;
+            }
+
+            // If account is on another chain, destroy stale client before requesting fresh permissions
+            if (existing) {
+                try {
+                    await wallet.client.destroy();
+                } catch {
+                    // Ignore destroy error
+                }
+                clearBeaconState();
+                const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
+                wallet = new OctezConnectWallet(
+                    {
+                        ...getDAppMetadata(),
+                        network: buildNetwork(currentNetwork, networkConfig.rpcUrl),
+                    },
+                    true
+                );
+                get().Tezos.setWalletProvider(wallet);
+                set({ wallet });
+            }
+
+            try {
+                await wallet.requestPermissions();
+            } catch (permError) {
+                // Stale paired peer or relay state in localStorage can trigger UNKNOWN_ERROR.
+                // Perform nuclear state wipe, recreate client singleton, and retry once.
+                console.warn("Permission request failed, cleaning stale pairing state and retrying:", permError);
+                try {
+                    await wallet.client.destroy();
+                } catch {}
+                clearBeaconState();
+                const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
+                wallet = new OctezConnectWallet(
+                    {
+                        ...getDAppMetadata(),
+                        network: buildNetwork(currentNetwork, networkConfig.rpcUrl),
+                    },
+                    true
+                );
+                get().Tezos.setWalletProvider(wallet);
+                set({ wallet });
+                await wallet.requestPermissions();
+            }
+
             const userAddress = await wallet.getPKH();
             set({ address: userAddress });
         } catch (error) {
@@ -153,13 +236,11 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         try {
             let { kukai } = get();
 
-            // If kukai not initialized, initialize it first
             if (!kukai) {
                 const { KukaiEmbed, Networks } = await import("kukai-embed");
 
-                // Single attempt at initialization - fail fast if there are conflicts
                 kukai = new KukaiEmbed({
-                    net: ENV === "dev" ? Networks.ghostnet : Networks.mainnet,
+                    net: Networks.mainnet,
                 });
                 await kukai.init();
                 set({ kukai });
@@ -170,7 +251,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
 
-            // Provide clear error message for common singleton conflicts
             if (errorMessage.includes("Already Present") || errorMessage.includes("Kukai-Embed")) {
                 throw new Error(
                     "Kukai is already initialized elsewhere. Please refresh the page to reset the state and try again."
@@ -184,44 +264,49 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     disconnectWallet: async () => {
         const { wallet, kukai } = get();
         if (wallet) {
-            await wallet.client.clearActiveAccount();
-            set({ address: null });
+            try {
+                await wallet.client.destroy();
+            } catch {}
+            clearBeaconState();
+            set({ wallet: null, address: null });
         }
         if (kukai) {
             kukai.logout();
             set({ address: null });
         }
     },
+    resetWalletConnection: async () => {
+        const { wallet } = get();
+        if (wallet) {
+            try {
+                await wallet.client.destroy();
+            } catch {}
+        }
+        clearBeaconState();
+        set({ wallet: null, address: null });
+    },
     switchNetwork: async (newNetwork: TezosNetwork) => {
         try {
-            const { Tezos, wallet } = get();
+            const { Tezos } = get();
             const networkConfig = NETWORK_CONFIGS[newNetwork];
 
-            // Update RPC provider using Taquito setProvider pattern
+            // Update RPC provider
             Tezos.setProvider({ rpc: networkConfig.rpcUrl });
 
-            // If wallet is connected, reconnect to new network
-            if (wallet) {
-                const { BeaconWallet } = await import("@taquito/beacon-wallet");
-                const { NetworkType } = await import("@airgap/beacon-dapp");
+            // Recreate the wallet for the new network.
+            // reset: true destroys the existing DAppClient singleton so the
+            // new one can register its own keypair and message listeners.
+            const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
+            const newWallet = new OctezConnectWallet(
+                {
+                    ...getDAppMetadata(),
+                    network: buildNetwork(newNetwork, networkConfig.rpcUrl),
+                },
+                true // reset singleton
+            );
 
-                // Clear current connection
-                await wallet.client.clearActiveAccount();
-
-                // Create new wallet instance for new network
-                const networkType = newNetwork === "mainnet" ? NetworkType.MAINNET : NetworkType.GHOSTNET;
-                const newWallet = new BeaconWallet({
-                    name: "Tezos Boilerplate",
-                    preferredNetwork: networkType,
-                });
-
-                Tezos.setWalletProvider(newWallet);
-                set({ wallet: newWallet, address: null });
-
-                console.log(`Switched to ${networkConfig.name} network`);
-            }
-
-            set({ network: newNetwork });
+            Tezos.setWalletProvider(newWallet);
+            set({ wallet: newWallet, address: null, network: newNetwork });
         } catch (error) {
             console.error("Failed to switch network:", error);
             throw error;

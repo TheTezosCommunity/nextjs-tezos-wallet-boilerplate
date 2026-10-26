@@ -182,7 +182,7 @@ async function testRPC() {
 
 // Current RPC endpoints:
 // Mainnet: https://rpc.tzkt.io/mainnet  
-// Ghostnet: https://rpc.tzkt.io/ghostnet`}</code>
+// Shadownet: https://rpc.tzkt.io/shadownet`}</code>
                             </pre>
                         </Example>
                     </div>
@@ -196,7 +196,7 @@ async function testRPC() {
                             <strong>Check:</strong> Verify your .env.local file has the correct NEXT_PUBLIC_NETWORK
                             setting.
                             <br />
-                            <strong>Ghostnet:</strong> NEXT_PUBLIC_NETWORK=ghostnet
+                            <strong>Shadownet:</strong> NEXT_PUBLIC_NETWORK=shadownet
                             <br />
                             <strong>Mainnet:</strong> NEXT_PUBLIC_NETWORK=mainnet
                         </div>

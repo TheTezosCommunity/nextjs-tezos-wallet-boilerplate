@@ -4,10 +4,11 @@ A modern, production-ready boilerplate for building Tezos dApps with Next.js and
 
 ## 🚀 Features
 
--   🔐 **Multi-Wallet Support** - Beacon SDK (Temple, Kukai, Umami) + Kukai Embed
+-   🔐 **Multi-Wallet Support** - Octez Connect SDK (Temple, Kukai, Umami, MetaMask) + Kukai Embed
 -   🔄 **Persistent Connections** - Automatic wallet state restoration on page refresh
+-   🌐 **Multi-Network Ready** - First-class support for Mainnet and Shadownet
 -   ⚡ **Optimized Performance** - Smart gas estimation with retry logic
--   🎨 **Modern UI** - Built with shadcn/ui components and Tailwind CSS
+-   🎨 **Modern UI** - Built with shadcn/ui components and Tailwind CSS 4
 -   🏗️ **Smart Contracts** - Deploy and interact with SmartPy contracts
 -   💸 **Token Support** - Send XTZ and FA1.2/FA2 tokens
 -   🔧 **Type Safety** - Full TypeScript support with proper types
@@ -15,22 +16,14 @@ A modern, production-ready boilerplate for building Tezos dApps with Next.js and
 
 ## 🛠️ Tech Stack
 
--   **Next.js 15** - React framework with App Router
--   **Taquito v21** - Tezos blockchain interaction library
--   **Beacon SDK 4.6.1** - Multi-wallet connection protocol
+-   **Next.js 16** - React 19 framework with App Router
+-   **Taquito v25** - Tezos blockchain interaction library
+-   **Octez Connect SDK v5** - `@tezos-x/octez.connect-sdk` multi-wallet connection protocol
 -   **Kukai Embed** - Direct Kukai wallet integration
 -   **Zustand** - Lightweight state management
 -   **Tailwind CSS 4** - Utility-first CSS framework
 -   **shadcn/ui** - Accessible component library
 -   **TypeScript** - Type-safe development
-
-## 🔒 Security
-
-> **✅ Security Patch Applied**
->
-> This boilerplate uses Next.js 15.3.6, which includes the security patch for [CVE-2025-66478](https://nextjs.org/blog/CVE-2025-66478) - a critical remote code execution vulnerability in React Server Components.
->
-> The patched version includes a hardened React Server Components implementation that prevents untrusted inputs from influencing server-side execution behavior.
 
 ## ⚡ Quick Start
 
@@ -85,15 +78,15 @@ Open [http://localhost:3000](http://localhost:3000) to see your dApp in action!
 Create a `.env.local` file:
 
 ```bash
-# Network configuration (ghostnet for testnet, mainnet for production)
-NEXT_PUBLIC_NETWORK=ghostnet
+# Network configuration: mainnet or shadownet
+NEXT_PUBLIC_TEZOS_NETWORK=shadownet
 ```
 
 ### Wallet Configuration
 
 The app automatically configures wallet providers based on your network:
 
--   **Ghostnet**: Testnet for development and testing
+-   **Shadownet**: Testnet matching latest protocol updates
 -   **Mainnet**: Production Tezos network
 
 ## 🏗️ Architecture

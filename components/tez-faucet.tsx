@@ -20,13 +20,6 @@ interface FaucetNetwork {
 
 const FAUCET_NETWORKS: FaucetNetwork[] = [
     {
-        name: "ghostnet",
-        displayName: "Ghostnet",
-        faucetUrl: "https://faucet.ghostnet.teztnets.com",
-        explorerUrl: "https://ghostnet.tzkt.io",
-        color: "bg-blue-500",
-    },
-    {
         name: "shadownet",
         displayName: "Shadownet",
         faucetUrl: "https://faucet.shadownet.teztnets.com",
@@ -44,7 +37,7 @@ interface FaucetResult {
 
 export function TezFaucet() {
     const { address } = useTezos();
-    const [selectedNetwork, setSelectedNetwork] = useState<string>("ghostnet");
+    const [selectedNetwork, setSelectedNetwork] = useState<string>("shadownet");
     const [customAddress, setCustomAddress] = useState<string>("");
     const [useCustomAddress, setUseCustomAddress] = useState<boolean>(false);
     const [isRequesting, setIsRequesting] = useState<boolean>(false);
@@ -253,7 +246,7 @@ export function TezFaucet() {
                     <h4 className="font-semibold">How to use:</h4>
                     <ul className="list-disc list-inside space-y-1 ml-2">
                         <li>
-                            Select your target testnet (Ghostnet for general testing, Shadownet for latest features)
+                            Select your target testnet (Shadownet)
                         </li>
                         <li>Use your connected wallet address or enter a custom address</li>
                         <li>Click &quot;Request Testnet Tokens&quot; to open the faucet</li>

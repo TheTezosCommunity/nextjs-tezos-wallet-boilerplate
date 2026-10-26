@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import { useTezos } from "@/lib/tezos/useTezos";
 import { Button } from "@/components/ui/button";
 import { Loader2, Wallet, LogOut } from "lucide-react";
@@ -31,16 +31,10 @@ const WalletConnection: React.FC = () => {
         }
     };
 
-    useEffect(() => {
-        if (address !== null) {
-            setIsLoading(false);
-        }
-    }, [address]);
-
     // Show loading spinner while initializing wallets
     if (!isInitialized || isLoading) {
         return (
-            <Button variant="outline" disabled>
+            <Button variant="outline" disabled aria-label="Loading wallet status">
                 <Loader2 className="h-4 w-4 animate-spin" />
             </Button>
         );

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Globe, Zap, ExternalLink, Ghost, Blend, Loader2 } from "lucide-react";
+import { Globe, ExternalLink, Blend, Loader2 } from "lucide-react";
 import { useTezos } from "@/lib/tezos/useTezos";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -12,12 +12,8 @@ const getNetworkIcon = (network: TezosNetwork) => {
     switch (network) {
         case "mainnet":
             return Globe;
-        case "ghostnet":
-            return Ghost;
         case "shadownet":
             return Blend;
-        case "oxfordnet":
-            return Zap;
         default:
             return Globe;
     }
