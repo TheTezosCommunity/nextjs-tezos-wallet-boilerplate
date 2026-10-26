@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 
 const nextConfig = {
+  turbopack: {},
   compiler: {
     // Remove all console logs
     removeConsole: false,

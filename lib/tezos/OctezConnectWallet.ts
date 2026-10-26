@@ -27,6 +27,7 @@ import type {
     WalletUnstakeParams,
     WalletFinalizeUnstakeParams,
     WalletIncreasePaidStorageParams,
+    WalletRegisterGlobalConstantParams,
 } from "@taquito/taquito";
 import {
     createTransferOperation,
@@ -34,6 +35,7 @@ import {
     createSetDelegateOperation,
     createTransferTicketOperation,
     createIncreasePaidStorageOperation,
+    createRegisterGlobalConstantOperation,
 } from "@taquito/taquito";
 import { hex2buf, mergebuf, buf2hex } from "@taquito/utils";
 
@@ -69,22 +71,26 @@ export class MissingRequiredScopes extends Error {
 /**
  * Build a Network config for DAppClientOptions.
  *
- * Per octez.connect best-practice, non-mainnet networks should use
- * NetworkType.CUSTOM with an explicit rpcUrl. This bypasses the wallet's
- * internal network lookup, which may not recognise newer testnet names and
- * would otherwise throw PARAMETERS_INVALID_ERROR.
- *
- * @see skills/tezos-octez-connect-patterns.md §1
+ * Supported named networks (mainnet, ghostnet, shadownet) use their defined
+ * NetworkType directly so web wallets (such as Kukai) resolve to the matching
+ * chain URL rather than falling back to mainnet. Unrecognized networks use
+ * NetworkType.CUSTOM with an explicit rpcUrl.
  */
-export function buildNetwork(name: string, rpcUrl: string): Network {
-    if (name === "mainnet") {
-        return { type: NetworkType.MAINNET };
+export function buildNetwork(name: string, rpcUrl?: string): Network {
+    switch (name.toLowerCase()) {
+        case "mainnet":
+            return { type: NetworkType.MAINNET, rpcUrl };
+        case "ghostnet":
+            return { type: NetworkType.GHOSTNET, rpcUrl };
+        case "shadownet":
+            return { type: NetworkType.SHADOWNET, rpcUrl };
+        default:
+            return {
+                type: NetworkType.CUSTOM,
+                name: name.charAt(0).toUpperCase() + name.slice(1),
+                rpcUrl,
+            };
     }
-    return {
-        type: NetworkType.CUSTOM,
-        name: name.charAt(0).toUpperCase() + name.slice(1),
-        rpcUrl,
-    };
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +105,8 @@ type AnyWalletParams =
     | WalletOriginateParams
     | WalletDelegateParams
     | WalletIncreasePaidStorageParams
-    | WalletTransferTicketParams;
+    | WalletTransferTicketParams
+    | WalletRegisterGlobalConstantParams;
 
 export class OctezConnectWallet implements WalletProvider {
     public readonly client: DAppClient;
@@ -110,7 +117,15 @@ export class OctezConnectWallet implements WalletProvider {
      *                 creates a fresh one (use when switching networks).
      */
     constructor(options: DAppClientOptions, reset = false) {
-        this.client = getDAppClientInstance(options, reset);
+        const clientOptions: DAppClientOptions = {
+            ...options,
+            featuredWallets:
+                options.featuredWallets ??
+                (options.network?.type === NetworkType.SHADOWNET
+                    ? ["kukai", "temple", "umami", "metamask"]
+                    : undefined),
+        };
+        this.client = getDAppClientInstance(clientOptions, reset);
     }
 
     // -- Permissions ---------------------------------------------------------
@@ -164,6 +179,23 @@ export class OctezConnectWallet implements WalletProvider {
         return this.removeDefaultParams(
             walletParams,
             await createTransferTicketOperation(this.formatParameters(walletParams))
+        );
+    }
+
+    async mapRegisterGlobalConstantParamsToWalletParams(
+        params: () => Promise<WalletRegisterGlobalConstantParams>
+    ): Promise<unknown> {
+        let walletParams: WalletRegisterGlobalConstantParams;
+        await this.client.showPrepare();
+        try {
+            walletParams = await params();
+        } catch (err) {
+            await this.client.hideUI(["alert"]);
+            throw err;
+        }
+        return this.removeDefaultParams(
+            walletParams,
+            await createRegisterGlobalConstantOperation(this.formatParameters(walletParams))
         );
     }
 
@@ -303,7 +335,6 @@ export class OctezConnectWallet implements WalletProvider {
 
     // -- Private helpers -----------------------------------------------------
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private formatParameters(params: any): any {
         const p = { ...params };
         if (p.fee) p.fee = String(p.fee);
@@ -312,7 +343,6 @@ export class OctezConnectWallet implements WalletProvider {
         return p;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     private removeDefaultParams(params: AnyWalletParams, operatedParams: any): any {
         const p = params as Record<string, unknown>;
         if (!p.fee) delete operatedParams.fee;

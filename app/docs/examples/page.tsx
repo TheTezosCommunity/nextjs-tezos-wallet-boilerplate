@@ -176,7 +176,7 @@ export async function callContract(
     const contract = await tezos.wallet.at(contractAddress);
     
     // Call the contract method
-    const operation = await contract.methods[entrypoint](params).send();
+    const operation = await contract.methodsObject[entrypoint](params).send();
     
     console.log('Operation hash:', operation.opHash);
 

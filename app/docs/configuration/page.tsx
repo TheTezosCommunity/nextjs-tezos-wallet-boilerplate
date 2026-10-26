@@ -153,7 +153,7 @@ NEXT_PUBLIC_NETWORK=ghostnet
                     rows={[
                         ["Mainnet API", "https://api.tzkt.io"],
                         ["Ghostnet API", "https://api.ghostnet.tzkt.io"],
-                        ["Oxfordnet API", "https://api.oxfordnet.tzkt.io"],
+                        ["Shadownet API", "https://api.shadownet.tzkt.io"],
                     ]}
                 />
 

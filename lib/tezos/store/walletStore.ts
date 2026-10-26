@@ -7,7 +7,7 @@ import type { OctezConnectWallet } from "../OctezConnectWallet";
 import type { KukaiEmbed } from "kukai-embed";
 
 // Network configuration types
-export type TezosNetwork = "mainnet" | "ghostnet" | "oxfordnet" | "shadownet";
+export type TezosNetwork = "mainnet" | "ghostnet" | "shadownet";
 
 interface NetworkConfig {
     name: string;
@@ -41,7 +41,7 @@ interface WalletState {
 const NETWORK_CONFIGS: Record<TezosNetwork, NetworkConfig> = {
     mainnet: {
         name: "Mainnet",
-        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_MAINNET || "https://mainnet.api.tez.ie",
+        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_MAINNET || "https://rpc.tzkt.io/mainnet",
         tzktApi: process.env.NEXT_PUBLIC_TZKT_API_MAINNET || "https://api.tzkt.io/v1",
         tzktExplorer: "https://tzkt.io",
         isTestnet: false,
@@ -54,16 +54,9 @@ const NETWORK_CONFIGS: Record<TezosNetwork, NetworkConfig> = {
         isTestnet: true,
         faucetUrl: "https://faucet.ghostnet.teztnets.com",
     },
-    oxfordnet: {
-        name: "Oxfordnet",
-        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_OXFORDNET || "https://oxfordnet.ecadinfra.com",
-        tzktApi: process.env.NEXT_PUBLIC_TZKT_API_OXFORDNET || "https://api.oxfordnet.tzkt.io/v1",
-        tzktExplorer: "https://oxfordnet.tzkt.io",
-        isTestnet: true,
-    },
     shadownet: {
         name: "Shadownet",
-        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_SHADOWNET || "https://rpc.shadownet.teztnets.com",
+        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_SHADOWNET || "https://rpc.tzkt.io/shadownet",
         tzktApi: process.env.NEXT_PUBLIC_TZKT_API_SHADOWNET || "https://api.shadownet.tzkt.io/v1",
         tzktExplorer: "https://shadownet.tzkt.io",
         isTestnet: true,
@@ -100,11 +93,15 @@ export const useWalletStore = create<WalletState>((set, get) => ({
             Tezos.setWalletProvider(wallet);
             set({ wallet });
 
-            // Restore any active session from a previous page load
+            // Restore any active session that matches the current network
             try {
                 const activeAccount = await wallet.client.getActiveAccount();
                 if (activeAccount) {
-                    set({ address: activeAccount.address });
+                    const currentNet = get().network;
+                    const accountNetType = activeAccount.network?.type?.toLowerCase();
+                    if (!accountNetType || accountNetType === currentNet) {
+                        set({ address: activeAccount.address });
+                    }
                 }
             } catch {
                 // No prior session — start fresh
