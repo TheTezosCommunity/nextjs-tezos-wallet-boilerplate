@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useWalletStore } from "@/lib/tezos/store/walletStore";
+import { useWalletStore, hasBeaconSession } from "@/lib/tezos/store/walletStore";
 
 interface WalletProviderProps {
     children: React.ReactNode;
@@ -12,7 +12,11 @@ export function WalletProvider({ children }: WalletProviderProps) {
 
     useEffect(() => {
         if (!isInitialized) {
-            initializeWallets();
+            if (hasBeaconSession()) {
+                initializeWallets();
+            } else {
+                useWalletStore.setState({ isInitialized: true });
+            }
         }
     }, [isInitialized, initializeWallets]);
 

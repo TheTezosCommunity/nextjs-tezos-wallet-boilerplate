@@ -103,6 +103,17 @@ function matchesActiveNetwork(
 }
 
 /**
+ * Check if a previous Beacon session exists in localStorage.
+ */
+export function hasBeaconSession(): boolean {
+    if (typeof window === "undefined" || typeof localStorage === "undefined") return false;
+    for (let i = 0; i < localStorage.length; i++) {
+        if (localStorage.key(i)?.startsWith("beacon:")) return true;
+    }
+    return false;
+}
+
+/**
  * Nuclear reset for any corrupted or stale Beacon state in localStorage.
  */
 export function clearBeaconState(): void {

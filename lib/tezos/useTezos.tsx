@@ -1,6 +1,6 @@
 "use client";
 import { useEffect } from "react";
-import { useWalletStore } from "./store/walletStore";
+import { useWalletStore, hasBeaconSession } from "./store/walletStore";
 
 export const useTezos = () => {
     const {
@@ -17,10 +17,14 @@ export const useTezos = () => {
         switchNetwork,
     } = useWalletStore();
 
-    // Initialize wallets on first mount to check for existing connections
+    // Check for existing session on mount; defer heavy SDK initialization if none exists
     useEffect(() => {
         if (!isInitialized) {
-            initializeWallets();
+            if (hasBeaconSession()) {
+                initializeWallets();
+            } else {
+                useWalletStore.setState({ isInitialized: true });
+            }
         }
     }, [isInitialized, initializeWallets]);
 

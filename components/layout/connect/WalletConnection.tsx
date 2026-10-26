@@ -34,7 +34,7 @@ const WalletConnection: React.FC = () => {
     // Show loading spinner while initializing wallets
     if (!isInitialized || isLoading) {
         return (
-            <Button variant="outline" disabled>
+            <Button variant="outline" disabled aria-label="Loading wallet status">
                 <Loader2 className="h-4 w-4 animate-spin" />
             </Button>
         );
