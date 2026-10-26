@@ -6,7 +6,7 @@ A modern, production-ready boilerplate for building Tezos dApps with Next.js and
 
 -   🔐 **Multi-Wallet Support** - Octez Connect SDK (Temple, Kukai, Umami, MetaMask) + Kukai Embed
 -   🔄 **Persistent Connections** - Automatic wallet state restoration on page refresh
--   🌐 **Multi-Network Ready** - First-class support for Mainnet, Ghostnet, and Shadownet
+-   🌐 **Multi-Network Ready** - First-class support for Mainnet and Shadownet
 -   ⚡ **Optimized Performance** - Smart gas estimation with retry logic
 -   🎨 **Modern UI** - Built with shadcn/ui components and Tailwind CSS 4
 -   🏗️ **Smart Contracts** - Deploy and interact with SmartPy contracts
@@ -78,16 +78,15 @@ Open [http://localhost:3000](http://localhost:3000) to see your dApp in action!
 Create a `.env.local` file:
 
 ```bash
-# Network configuration: mainnet, ghostnet, or shadownet
-NEXT_PUBLIC_TEZOS_NETWORK=ghostnet
+# Network configuration: mainnet or shadownet
+NEXT_PUBLIC_TEZOS_NETWORK=shadownet
 ```
 
 ### Wallet Configuration
 
 The app automatically configures wallet providers based on your network:
 
--   **Ghostnet**: Long-running testnet for staging and development
--   **Shadownet**: Fast testnet matching latest protocol updates
+-   **Shadownet**: Testnet matching latest protocol updates
 -   **Mainnet**: Production Tezos network
 
 ## 🏗️ Architecture

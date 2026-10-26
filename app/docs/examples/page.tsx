@@ -237,7 +237,7 @@ export async function fetchNFTsForAddress(
   try {
     // Fetch tokens from TzKT API
     const response = await fetch(
-      \`https://api.ghostnet.tzkt.io/v1/tokens/balances?\` +
+      \`https://api.shadownet.tzkt.io/v1/tokens/balances?\` +
       \`account=\${address}&token.contract=\${contractAddress}\`
     );
     
@@ -249,7 +249,7 @@ export async function fetchNFTsForAddress(
         try {
           // Get token metadata from contract storage
           const metadataResponse = await fetch(
-            \`https://api.ghostnet.tzkt.io/v1/contracts/\${contractAddress}/storage\`
+            \`https://api.shadownet.tzkt.io/v1/contracts/\${contractAddress}/storage\`
           );
           const storage = await metadataResponse.json();
           
@@ -315,7 +315,7 @@ export async function fetchNFTsForAddress(
 
                 <Example title="TzKT API Helper Functions">
                     <pre className="bg-muted p-4 rounded-md overflow-x-auto text-sm">
-                        <code>{`const TZKT_API = 'https://api.ghostnet.tzkt.io/v1';
+                        <code>{`const TZKT_API = 'https://api.shadownet.tzkt.io/v1';
 
 export class TzKTClient {
   static async getAccount(address: string) {

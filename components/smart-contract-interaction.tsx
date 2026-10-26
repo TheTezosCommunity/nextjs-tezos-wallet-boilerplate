@@ -35,7 +35,7 @@ export function SmartContractInteraction({ onSuccess, onError }: SmartContractIn
     const [selectedTemplate, setSelectedTemplate] = useState<SmartPyContract | null>(null);
     const [deployMode, setDeployMode] = useState<"template" | "custom">("template");
 
-    // Sample contract data for Ghostnet
+    // Sample contract data for Shadownet
     const sampleContracts = [
         {
             name: "Smartpy template",
@@ -555,7 +555,7 @@ export function SmartContractInteraction({ onSuccess, onError }: SmartContractIn
 
                             {deployMode === "template" && (
                                 <div className="text-xs text-muted-foreground">
-                                    💡 Templates are pre-compiled SmartPy contracts ready for deployment on Ghostnet
+                                    💡 Templates are pre-compiled SmartPy contracts ready for deployment on Shadownet
                                 </div>
                             )}
                         </div>

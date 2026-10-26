@@ -10,22 +10,20 @@ import { Loader2, AlertCircle, ExternalLink } from "lucide-react";
 import { useTezos } from "@/lib/tezos/useTezos";
 
 // Network configuration
-const NETWORK = process.env.NEXT_PUBLIC_TEZOS_NETWORK || "ghostnet";
+const NETWORK = process.env.NEXT_PUBLIC_TEZOS_NETWORK || "shadownet";
 const TZKT_API_ENDPOINTS = {
     mainnet: "https://api.tzkt.io/v1",
-    ghostnet: "https://api.ghostnet.tzkt.io/v1",
-    oxfordnet: "https://api.oxfordnet.tzkt.io/v1",
+    shadownet: "https://api.shadownet.tzkt.io/v1",
 } as const;
 
 const TZKT_EXPLORER_ENDPOINTS = {
     mainnet: "https://tzkt.io",
-    ghostnet: "https://ghostnet.tzkt.io",
-    oxfordnet: "https://oxfordnet.tzkt.io",
+    shadownet: "https://shadownet.tzkt.io",
 } as const;
 
-const TZKT_API = TZKT_API_ENDPOINTS[NETWORK as keyof typeof TZKT_API_ENDPOINTS] || TZKT_API_ENDPOINTS.ghostnet;
+const TZKT_API = TZKT_API_ENDPOINTS[NETWORK as keyof typeof TZKT_API_ENDPOINTS] || TZKT_API_ENDPOINTS.shadownet;
 const TZKT_EXPLORER =
-    TZKT_EXPLORER_ENDPOINTS[NETWORK as keyof typeof TZKT_EXPLORER_ENDPOINTS] || TZKT_EXPLORER_ENDPOINTS.ghostnet;
+    TZKT_EXPLORER_ENDPOINTS[NETWORK as keyof typeof TZKT_EXPLORER_ENDPOINTS] || TZKT_EXPLORER_ENDPOINTS.shadownet;
 
 // Smart image URI resolution
 const resolveImageUri = (metadata: {

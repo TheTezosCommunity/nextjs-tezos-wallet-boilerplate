@@ -72,9 +72,8 @@ export class MissingRequiredScopes extends Error {
  * Build a Network config for DAppClientOptions.
  *
  * - mainnet: uses NetworkType.MAINNET without an explicit rpcUrl (standard Beacon spec)
- * - shadownet: uses NetworkType.SHADOWNET with explicit rpcUrl so web wallets (Kukai) map correctly
- * - ghostnet / other: uses NetworkType.CUSTOM to avoid PARAMETERS_INVALID_ERROR on wallets
- *   whose internal enum does not recognize the string "ghostnet"
+ * - shadownet: uses NetworkType.SHADOWNET with explicit rpcUrl
+ * - custom: uses NetworkType.CUSTOM with explicit rpcUrl
  */
 export function buildNetwork(name: string, rpcUrl?: string): Network {
     switch (name.toLowerCase()) {
@@ -84,12 +83,6 @@ export function buildNetwork(name: string, rpcUrl?: string): Network {
             return {
                 type: NetworkType.SHADOWNET,
                 rpcUrl: rpcUrl || "https://rpc.tzkt.io/shadownet",
-            };
-        case "ghostnet":
-            return {
-                type: NetworkType.CUSTOM,
-                name: "Ghostnet",
-                rpcUrl: rpcUrl || "https://ghostnet.ecadinfra.com",
             };
         default:
             return {
@@ -139,7 +132,7 @@ export class OctezConnectWallet implements WalletProvider {
 
     async requestPermissions(request?: RequestPermissionInput): Promise<void> {
         const req: RequestPermissionInput = request ?? {
-            scopes: [PermissionScope.OPERATION_REQUEST, PermissionScope.SIGN],
+            scopes: [PermissionScope.OPERATION_REQUEST],
         };
         await this.client.requestPermissions(req);
     }

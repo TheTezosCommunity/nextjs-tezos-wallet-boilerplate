@@ -128,7 +128,7 @@ export default function WalletGuidePage() {
     // 2. Initialize Beacon Wallet
     const wallet = new BeaconWallet({
       name: 'Tezos Boilerplate',
-      preferredNetwork: ENV === 'dev' ? NetworkType.GHOSTNET : NetworkType.MAINNET
+      preferredNetwork: ENV === 'dev' ? NetworkType.SHADOWNET : NetworkType.MAINNET
     });
     
     // 3. Set as Tezos provider
@@ -143,7 +143,7 @@ export default function WalletGuidePage() {
     
     // 5. Initialize Kukai
     const kukai = new KukaiEmbed({
-      net: ENV === 'dev' ? Networks.ghostnet : Networks.mainnet
+      net: ENV === 'dev' ? ('shadownet' as any) : Networks.mainnet
     });
     await kukai.init();
     

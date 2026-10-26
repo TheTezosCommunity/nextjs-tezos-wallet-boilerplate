@@ -7,7 +7,7 @@ import type { OctezConnectWallet } from "../OctezConnectWallet";
 import type { KukaiEmbed } from "kukai-embed";
 
 // Network configuration types
-export type TezosNetwork = "mainnet" | "ghostnet" | "shadownet";
+export type TezosNetwork = "mainnet" | "shadownet";
 
 interface NetworkConfig {
     name: string;
@@ -29,6 +29,7 @@ interface WalletState {
     connectWallet: () => Promise<void>;
     connectKukai: () => Promise<void>;
     disconnectWallet: () => Promise<void>;
+    resetWalletConnection: () => Promise<void>;
     switchNetwork: (network: TezosNetwork) => Promise<void>;
     setTezos: (tezos: TezosToolkit) => void;
     setWallet: (wallet: OctezConnectWallet | null) => void;
@@ -39,21 +40,6 @@ interface WalletState {
 
 // Network configurations following Taquito best practices
 const NETWORK_CONFIGS: Record<TezosNetwork, NetworkConfig> = {
-    mainnet: {
-        name: "Mainnet",
-        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_MAINNET || "https://rpc.tzkt.io/mainnet",
-        tzktApi: process.env.NEXT_PUBLIC_TZKT_API_MAINNET || "https://api.tzkt.io/v1",
-        tzktExplorer: "https://tzkt.io",
-        isTestnet: false,
-    },
-    ghostnet: {
-        name: "Ghostnet",
-        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_GHOSTNET || "https://ghostnet.ecadinfra.com",
-        tzktApi: process.env.NEXT_PUBLIC_TZKT_API_GHOSTNET || "https://api.ghostnet.tzkt.io/v1",
-        tzktExplorer: "https://ghostnet.tzkt.io",
-        isTestnet: true,
-        faucetUrl: "https://faucet.ghostnet.teztnets.com",
-    },
     shadownet: {
         name: "Shadownet",
         rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_SHADOWNET || "https://rpc.tzkt.io/shadownet",
@@ -62,12 +48,19 @@ const NETWORK_CONFIGS: Record<TezosNetwork, NetworkConfig> = {
         isTestnet: true,
         faucetUrl: "https://faucet.shadownet.teztnets.com",
     },
+    mainnet: {
+        name: "Mainnet",
+        rpcUrl: process.env.NEXT_PUBLIC_TEZOS_RPC_MAINNET || "https://rpc.tzkt.io/mainnet",
+        tzktApi: process.env.NEXT_PUBLIC_TZKT_API_MAINNET || "https://api.tzkt.io/v1",
+        tzktExplorer: "https://tzkt.io",
+        isTestnet: false,
+    },
 };
 
-// Get initial network from environment or default to ghostnet
+// Get initial network from environment or default to shadownet
 const getInitialNetwork = (): TezosNetwork => {
-    const envNetwork = (process.env.NEXT_PUBLIC_TEZOS_NETWORK as TezosNetwork) || "ghostnet";
-    return Object.keys(NETWORK_CONFIGS).includes(envNetwork) ? envNetwork : "ghostnet";
+    const envNetwork = (process.env.NEXT_PUBLIC_TEZOS_NETWORK as TezosNetwork) || "shadownet";
+    return Object.keys(NETWORK_CONFIGS).includes(envNetwork) ? envNetwork : "shadownet";
 };
 
 const initialNetwork = getInitialNetwork();
@@ -84,7 +77,6 @@ function getDAppMetadata() {
 
 /**
  * Checks if a session account matches the target network.
- * Handles custom network mapping for Ghostnet as used by Temple and other wallets.
  */
 function matchesActiveNetwork(
     account: { network?: { type?: string; rpcUrl?: string } } | null,
@@ -98,8 +90,7 @@ function matchesActiveNetwork(
     if (targetNetwork === "shadownet") {
         return accountNet === "shadownet";
     }
-    // ghostnet / custom
-    return accountNet === "custom" || accountNet === "ghostnet";
+    return false;
 }
 
 /**
@@ -191,16 +182,49 @@ export const useWalletStore = create<WalletState>((set, get) => ({
                 return;
             }
 
-            // If account is on another chain, clear before requesting fresh permissions
+            // If account is on another chain, destroy stale client before requesting fresh permissions
             if (existing) {
                 try {
-                    await wallet.clearActiveAccount();
+                    await wallet.client.destroy();
                 } catch {
-                    // Ignore clear failure
+                    // Ignore destroy error
                 }
+                clearBeaconState();
+                const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
+                wallet = new OctezConnectWallet(
+                    {
+                        ...getDAppMetadata(),
+                        network: buildNetwork(currentNetwork, networkConfig.rpcUrl),
+                    },
+                    true
+                );
+                get().Tezos.setWalletProvider(wallet);
+                set({ wallet });
             }
 
-            await wallet.requestPermissions();
+            try {
+                await wallet.requestPermissions();
+            } catch (permError) {
+                // Stale paired peer or relay state in localStorage can trigger UNKNOWN_ERROR.
+                // Perform nuclear state wipe, recreate client singleton, and retry once.
+                console.warn("Permission request failed, cleaning stale pairing state and retrying:", permError);
+                try {
+                    await wallet.client.destroy();
+                } catch {}
+                clearBeaconState();
+                const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
+                wallet = new OctezConnectWallet(
+                    {
+                        ...getDAppMetadata(),
+                        network: buildNetwork(currentNetwork, networkConfig.rpcUrl),
+                    },
+                    true
+                );
+                get().Tezos.setWalletProvider(wallet);
+                set({ wallet });
+                await wallet.requestPermissions();
+            }
+
             const userAddress = await wallet.getPKH();
             set({ address: userAddress });
         } catch (error) {
@@ -212,13 +236,11 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         try {
             let { kukai } = get();
 
-            // If kukai not initialized, initialize it first
             if (!kukai) {
                 const { KukaiEmbed, Networks } = await import("kukai-embed");
 
-                // Single attempt at initialization - fail fast if there are conflicts
                 kukai = new KukaiEmbed({
-                    net: ENV === "dev" ? Networks.ghostnet : Networks.mainnet,
+                    net: Networks.mainnet,
                 });
                 await kukai.init();
                 set({ kukai });
@@ -229,7 +251,6 @@ export const useWalletStore = create<WalletState>((set, get) => ({
         } catch (error: unknown) {
             const errorMessage = error instanceof Error ? error.message : String(error);
 
-            // Provide clear error message for common singleton conflicts
             if (errorMessage.includes("Already Present") || errorMessage.includes("Kukai-Embed")) {
                 throw new Error(
                     "Kukai is already initialized elsewhere. Please refresh the page to reset the state and try again."
@@ -243,13 +264,26 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     disconnectWallet: async () => {
         const { wallet, kukai } = get();
         if (wallet) {
-            await wallet.clearActiveAccount();
-            set({ address: null });
+            try {
+                await wallet.client.destroy();
+            } catch {}
+            clearBeaconState();
+            set({ wallet: null, address: null });
         }
         if (kukai) {
             kukai.logout();
             set({ address: null });
         }
+    },
+    resetWalletConnection: async () => {
+        const { wallet } = get();
+        if (wallet) {
+            try {
+                await wallet.client.destroy();
+            } catch {}
+        }
+        clearBeaconState();
+        set({ wallet: null, address: null });
     },
     switchNetwork: async (newNetwork: TezosNetwork) => {
         try {
