@@ -71,19 +71,26 @@ export class MissingRequiredScopes extends Error {
 /**
  * Build a Network config for DAppClientOptions.
  *
- * Supported named networks (mainnet, ghostnet, shadownet) use their defined
- * NetworkType directly so web wallets (such as Kukai) resolve to the matching
- * chain URL rather than falling back to mainnet. Unrecognized networks use
- * NetworkType.CUSTOM with an explicit rpcUrl.
+ * - mainnet: uses NetworkType.MAINNET without an explicit rpcUrl (standard Beacon spec)
+ * - shadownet: uses NetworkType.SHADOWNET with explicit rpcUrl so web wallets (Kukai) map correctly
+ * - ghostnet / other: uses NetworkType.CUSTOM to avoid PARAMETERS_INVALID_ERROR on wallets
+ *   whose internal enum does not recognize the string "ghostnet"
  */
 export function buildNetwork(name: string, rpcUrl?: string): Network {
     switch (name.toLowerCase()) {
         case "mainnet":
-            return { type: NetworkType.MAINNET, rpcUrl };
-        case "ghostnet":
-            return { type: NetworkType.GHOSTNET, rpcUrl };
+            return { type: NetworkType.MAINNET };
         case "shadownet":
-            return { type: NetworkType.SHADOWNET, rpcUrl };
+            return {
+                type: NetworkType.SHADOWNET,
+                rpcUrl: rpcUrl || "https://rpc.tzkt.io/shadownet",
+            };
+        case "ghostnet":
+            return {
+                type: NetworkType.CUSTOM,
+                name: "Ghostnet",
+                rpcUrl: rpcUrl || "https://ghostnet.ecadinfra.com",
+            };
         default:
             return {
                 type: NetworkType.CUSTOM,
@@ -131,7 +138,10 @@ export class OctezConnectWallet implements WalletProvider {
     // -- Permissions ---------------------------------------------------------
 
     async requestPermissions(request?: RequestPermissionInput): Promise<void> {
-        await this.client.requestPermissions(request);
+        const req: RequestPermissionInput = request ?? {
+            scopes: [PermissionScope.OPERATION_REQUEST, PermissionScope.SIGN],
+        };
+        await this.client.requestPermissions(req);
     }
 
     // -- WalletProvider: identity --------------------------------------------

@@ -72,6 +72,49 @@ const getInitialNetwork = (): TezosNetwork => {
 
 const initialNetwork = getInitialNetwork();
 
+function getDAppMetadata() {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    return {
+        name: "Tezos Boilerplate",
+        description: "A modern boilerplate for building Tezos dApps with Next.js",
+        appUrl: origin || undefined,
+        iconUrl: origin ? `${origin}/icon1.png` : undefined,
+    };
+}
+
+/**
+ * Checks if a session account matches the target network.
+ * Handles custom network mapping for Ghostnet as used by Temple and other wallets.
+ */
+function matchesActiveNetwork(
+    account: { network?: { type?: string; rpcUrl?: string } } | null,
+    targetNetwork: TezosNetwork
+): boolean {
+    if (!account?.network?.type) return false;
+    const accountNet = account.network.type.toLowerCase();
+    if (targetNetwork === "mainnet") {
+        return accountNet === "mainnet";
+    }
+    if (targetNetwork === "shadownet") {
+        return accountNet === "shadownet";
+    }
+    // ghostnet / custom
+    return accountNet === "custom" || accountNet === "ghostnet";
+}
+
+/**
+ * Nuclear reset for any corrupted or stale Beacon state in localStorage.
+ */
+export function clearBeaconState(): void {
+    if (typeof localStorage === "undefined") return;
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key?.startsWith("beacon:")) keysToRemove.push(key);
+    }
+    keysToRemove.forEach((k) => localStorage.removeItem(k));
+}
+
 export const useWalletStore = create<WalletState>((set, get) => ({
     Tezos: new TezosToolkit(NETWORK_CONFIGS[initialNetwork].rpcUrl),
     wallet: null,
@@ -82,11 +125,12 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     initializeWallets: async () => {
         try {
             const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
-            const networkConfig = NETWORK_CONFIGS[get().network];
+            const currentNetwork = get().network;
+            const networkConfig = NETWORK_CONFIGS[currentNetwork];
 
             const wallet = new OctezConnectWallet({
-                name: "Tezos Boilerplate",
-                network: buildNetwork(get().network, networkConfig.rpcUrl),
+                ...getDAppMetadata(),
+                network: buildNetwork(currentNetwork, networkConfig.rpcUrl),
             });
 
             const { Tezos } = get();
@@ -96,12 +140,8 @@ export const useWalletStore = create<WalletState>((set, get) => ({
             // Restore any active session that matches the current network
             try {
                 const activeAccount = await wallet.client.getActiveAccount();
-                if (activeAccount) {
-                    const currentNet = get().network;
-                    const accountNetType = activeAccount.network?.type?.toLowerCase();
-                    if (!accountNetType || accountNetType === currentNet) {
-                        set({ address: activeAccount.address });
-                    }
+                if (activeAccount && matchesActiveNetwork(activeAccount, currentNetwork)) {
+                    set({ address: activeAccount.address });
                 }
             } catch {
                 // No prior session — start fresh
@@ -116,20 +156,37 @@ export const useWalletStore = create<WalletState>((set, get) => ({
     connectWallet: async () => {
         try {
             let { wallet } = get();
+            const currentNetwork = get().network;
+            const networkConfig = NETWORK_CONFIGS[currentNetwork];
 
             // Lazily create the wallet if initializeWallets has not run yet
             if (!wallet) {
                 const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
-                const networkConfig = NETWORK_CONFIGS[get().network];
 
                 wallet = new OctezConnectWallet({
-                    name: "Tezos Boilerplate",
-                    network: buildNetwork(get().network, networkConfig.rpcUrl),
+                    ...getDAppMetadata(),
+                    network: buildNetwork(currentNetwork, networkConfig.rpcUrl),
                 });
 
                 const { Tezos } = get();
                 Tezos.setWalletProvider(wallet);
                 set({ wallet });
+            }
+
+            // Check if there is already a matching active account from a previous session
+            const existing = await wallet.client.getActiveAccount();
+            if (existing && matchesActiveNetwork(existing, currentNetwork)) {
+                set({ address: existing.address });
+                return;
+            }
+
+            // If account is on another chain, clear before requesting fresh permissions
+            if (existing) {
+                try {
+                    await wallet.clearActiveAccount();
+                } catch {
+                    // Ignore clear failure
+                }
             }
 
             await wallet.requestPermissions();
@@ -197,7 +254,7 @@ export const useWalletStore = create<WalletState>((set, get) => ({
             const { OctezConnectWallet, buildNetwork } = await import("../OctezConnectWallet");
             const newWallet = new OctezConnectWallet(
                 {
-                    name: "Tezos Boilerplate",
+                    ...getDAppMetadata(),
                     network: buildNetwork(newNetwork, networkConfig.rpcUrl),
                 },
                 true // reset singleton
